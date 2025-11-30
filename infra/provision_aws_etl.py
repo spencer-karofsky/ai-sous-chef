@@ -1,0 +1,92 @@
+"""
+infra/provision_aws_etl.py
+
+Description:
+    * Provisions the AWS Infrastructure to run ETL Pipeline
+
+Instructions:
+    * Run via CLI:
+        python main.py provision
+
+Authors:
+    * Spencer Karofsky (https://github.com/spencer-karofsky)
+"""
+import json
+import boto3
+from infra.managers.vpc_manager import VPCNetworkManager, VPCSecurityManager, VPCSetupManager
+from infra.managers.s3_manager import S3BucketManager
+from infra.managers.ec2_manager import EC2InstancesManager, EC2KeyPairManager
+from infra.managers.iam_manager import IAMRoleManager
+from infra.config import AWS_RESOURCES, EC2_USER_DATA_SCRIPT
+
+def provision_aws_etl():
+    # Create Clients
+    ec2_client = boto3.client('ec2')
+    iam_client = boto3.client('iam')
+
+    # VPC
+    vpc_setup = VPCSetupManager(ec2_client)
+    vpc_setup.create_vpc(AWS_RESOURCES['vpc_name'])
+    vpc_id = vpc_setup.get_vpc_id()
+    vpc_cidr = vpc_setup.get_cidr_block()
+
+    # Subnet
+    vpc_network = VPCNetworkManager(ec2_client, vpc_id)
+    vpc_network.create_subnet(vpc_cidr, subnet_name=AWS_RESOURCES['vpc_subnet_name'])
+    vpc_subnet_id = vpc_network.subnet_id
+
+    # Security Group
+    vpc_security = VPCSecurityManager(
+        ec2_client,
+        vpc_id,
+        description=AWS_RESOURCES['vpc_security_description'],
+        group_name=AWS_RESOURCES['vpc_security_group_name']
+    )
+    vpc_security.create_security_group(egress=True, ssh=True)
+    vpc_security_group_id = vpc_security.security_group_id
+
+    # S3
+    s3_bucket = S3BucketManager()
+    s3_bucket.create_bucket(AWS_RESOURCES['s3_raw_bucket_name'])
+    s3_bucket.create_bucket(AWS_RESOURCES['s3_clean_bucket_name'])
+
+    # IAM - Role and Instance Profile
+    ec2_trust_policy = json.dumps({
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"Service": "ec2.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+            }
+        ]
+    })
+
+    iam_manager = IAMRoleManager(iam_client)
+    role_name = AWS_RESOURCES['ec2_iam_role_name']
+    profile_name = AWS_RESOURCES['ec2_instance_profile_name']
+
+    iam_manager.create_role(role_name, ec2_trust_policy)
+    for policy_arn in AWS_RESOURCES['ec2_iam_policies']:
+        iam_manager.attach_policy(role_name, policy_arn)
+    iam_manager.create_instance_profile(profile_name)
+    iam_manager.add_role_to_instance_profile(profile_name, role_name)
+
+    # EC2
+    ec2_key_pair = EC2KeyPairManager(ec2_client)
+    ec2_key_pair.create_key_pair(AWS_RESOURCES['ec2_key_pair_name'])
+
+    ec2_instance_manager = EC2InstancesManager(ec2_client)
+    ec2_instance_manager.launch_instance(
+        instance_name=AWS_RESOURCES['ec2_instance_name'],
+        image_id=AWS_RESOURCES['ec2_image_id'],
+        instance_type=AWS_RESOURCES['ec2_instance_type'],
+        subnet_id=vpc_subnet_id,
+        key_name=AWS_RESOURCES['ec2_key_pair_name'],
+        security_group_ids=[vpc_security_group_id],
+        iam_instance_profile=profile_name,
+        user_data=EC2_USER_DATA_SCRIPT
+    )
+
+if __name__ == "__main__":
+    provision_aws_etl()
