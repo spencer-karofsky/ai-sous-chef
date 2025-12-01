@@ -51,9 +51,12 @@ yum install -y python3-pip git
 
 git clone https://github.com/spencer-karofsky/ai-sous-chef.git /home/ec2-user/ai-sous-chef
 cd /home/ec2-user/ai-sous-chef
-pip3 install -r requirements.txt
 
-python3 main.py etl
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+python main.py etl
 
 echo "ETL complete" > /home/ec2-user/etl_status.txt
 """
