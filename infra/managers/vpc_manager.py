@@ -476,5 +476,3 @@ class VPCSecurityManager(VPCSecurityInterface):
 
         logger.info(f'[SUCCESS] deleted security group "{group_name}"')
         return True
-
-    

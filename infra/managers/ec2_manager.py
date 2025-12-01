@@ -251,12 +251,13 @@ class EC2KeyPairManager(EC2KeyPairInterface):
         """
         self.client = ec2_client
 
-    def create_key_pair(self, key_name: str) -> bool:
+    def create_key_pair(self, key_name: str, save_dir: str = None) -> bool:
         """Create a key for access into an EC2 instance
         Docs:
             https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/create_key_pair.html
         Args:
             key_name: the key name
+            save_dir: directory to save the key (defaults to ~/.ssh)
         Return:
             True/False to indicate success/failure
         """
@@ -268,15 +269,22 @@ class EC2KeyPairManager(EC2KeyPairInterface):
 
         private_key = response['KeyMaterial']
 
+        # Save to ~/.ssh by default
+        if save_dir is None:
+            save_dir = os.path.expanduser('~/.ssh')
+        
+        os.makedirs(save_dir, exist_ok=True)
+        key_path = os.path.join(save_dir, f'{key_name}.pem')
+
         try:
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".pem") as key_file:
+            with open(key_path, 'w') as key_file:
                 key_file.write(private_key)
-                key_path = key_file.name
             os.chmod(key_path, 0o400)
         except Exception as e:
-            logger.error(f'[FAIL] could not save key to temp file ({e})')
+            logger.error(f'[FAIL] could not save key to {key_path} ({e})')
             return False
 
+        self.key_path = key_path # Store for later use
         logger.info(f'[SUCCESS] generated private key at {key_path}')
         return True
     
