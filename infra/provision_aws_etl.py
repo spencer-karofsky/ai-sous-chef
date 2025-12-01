@@ -12,12 +12,15 @@ Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
 import json
+import time
 import boto3
+
 from infra.managers.vpc_manager import VPCNetworkManager, VPCSecurityManager, VPCSetupManager
 from infra.managers.s3_manager import S3BucketManager
 from infra.managers.ec2_manager import EC2InstancesManager, EC2KeyPairManager
 from infra.managers.iam_manager import IAMRoleManager
 from infra.config import AWS_RESOURCES, EC2_USER_DATA_SCRIPT
+
 
 def provision_aws_etl():
     # Create Clients
@@ -28,12 +31,19 @@ def provision_aws_etl():
     vpc_setup = VPCSetupManager(ec2_client)
     vpc_setup.create_vpc(AWS_RESOURCES['vpc_name'])
     vpc_id = vpc_setup.get_vpc_id()
-    vpc_cidr = vpc_setup.get_cidr_block()
 
-    # Subnet
+    # Subnet (use a /24 subset, not the full /16)
     vpc_network = VPCNetworkManager(ec2_client, vpc_id)
-    vpc_network.create_subnet(vpc_cidr, subnet_name=AWS_RESOURCES['vpc_subnet_name'])
+    vpc_network.create_subnet('10.0.1.0/24', subnet_name=AWS_RESOURCES['vpc_subnet_name'])
     vpc_subnet_id = vpc_network.subnet_id
+
+    # Internet Gateway (required for public internet access)
+    vpc_network.create_internet_gateway()
+
+    # Route Table with public route
+    vpc_network.create_route_table()
+    vpc_network.add_route('0.0.0.0/0')  # Route all traffic to IGW
+    vpc_network.associate_route_table()
 
     # Security Group
     vpc_security = VPCSecurityManager(
@@ -50,7 +60,7 @@ def provision_aws_etl():
     s3_bucket.create_bucket(AWS_RESOURCES['s3_raw_bucket_name'])
     s3_bucket.create_bucket(AWS_RESOURCES['s3_clean_bucket_name'])
 
-    # IAM - Role and Instance Profile
+    # IAM: Role and Instance Profile
     ec2_trust_policy = json.dumps({
         "Version": "2012-10-17",
         "Statement": [
@@ -72,6 +82,10 @@ def provision_aws_etl():
     iam_manager.create_instance_profile(profile_name)
     iam_manager.add_role_to_instance_profile(profile_name, role_name)
 
+    # Wait for IAM instance profile to propagate
+    print("Waiting for IAM instance profile to propagate...")
+    time.sleep(15)
+
     # EC2
     ec2_key_pair = EC2KeyPairManager(ec2_client)
     ec2_key_pair.create_key_pair(AWS_RESOURCES['ec2_key_pair_name'])
@@ -88,5 +102,8 @@ def provision_aws_etl():
         user_data=EC2_USER_DATA_SCRIPT
     )
 
-if __name__ == "__main__":
+    print('Provisioning complete!')
+
+
+if __name__ == '__main__':
     provision_aws_etl()

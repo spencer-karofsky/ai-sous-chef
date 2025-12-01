@@ -91,6 +91,33 @@ class EC2InstancesManager(EC2InstancesInterface):
         logger.info(f'[SUCCESS] launched EC2 instance')
         return True
     
+    def get_instance_id_by_name(self, instance_name: str) -> str:
+        """Return the instance ID stored in self.instances with this Name tag."""
+        for inst in self.instances:
+            # Tags is a list of dicts: [{'Key': 'Name', 'Value': 'my-instance'}]
+            for tag in inst.get("Tags", []):
+                if tag.get("Key") == "Name" and tag.get("Value") == instance_name:
+                    return inst["InstanceId"]
+        
+        logger.warning(f'[WARNING] instance "{instance_name}" not found in self.instances')
+        return None
+    
+    def terminate_instance(self, instance_name: str) -> bool:
+        """Terminate a single EC2 instance identified by its Name tag."""
+        instance_id = self.get_instance_id_by_name(instance_name)
+        if not instance_id:
+            logger.warning(f'[WARNING] cannot terminate instance "{instance_name}" (not found)')
+            return False
+
+        try:
+            self.client.terminate_instances(InstanceIds=[instance_id])
+        except ClientError as e:
+            logger.error(f'[FAIL] cannot terminate EC2 instance "{instance_name}" ({e})')
+            return False
+
+        logger.info(f'[SUCCESS] terminated EC2 instance "{instance_name}" ({instance_id})')
+        return True
+
     def terminate_instances(self, instance_ids: List[str]) -> bool:
         """Terminate/delete EC2 instances
         Docs:

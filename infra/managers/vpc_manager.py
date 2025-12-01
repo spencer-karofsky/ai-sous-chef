@@ -316,6 +316,23 @@ class VPCNetworkManager(VPCNetworkInterface):
             return False
         logger.info(f'[SUCCESS] associated subnet with the route table')
         return True
+    
+    def delete_subnet(self) -> bool:
+        """Delete the subnet associated with this VPCNetworkManager instance.
+        Docs:
+            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/delete_subnet.html
+        Return:
+            True/False to indicate success/failure
+        """
+        try:
+            self.client.delete_subnet(SubnetId=self.subnet_id)
+        except ClientError as e:
+            logger.error(f'[FAIL] cannot delete subnet "{self.subnet_id}" ({e})')
+            return False
+
+        logger.info(f'[SUCCESS] deleted subnet "{self.subnet_id}"')
+        return True
+
 
 class VPCSecurityManager(VPCSecurityInterface):
     def __init__(self,
@@ -421,4 +438,43 @@ class VPCSecurityManager(VPCSecurityInterface):
             success &= self._authorize_all_ingress()
 
         return success
+    
+    def delete_security_group(self, group_name: str = None) -> bool:
+        """Delete a security group by name.
+        Docs:
+            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2/client/delete_security_group.html
+        Args:
+            group_name: the name of the security group (defaults to the group's name from constructor)
+        Return:
+            True/False to indicate success/failure
+        """
+        if group_name is None:
+            group_name = self.group_name
+
+        # First, retrieve the security group ID
+        try:
+            response = self.client.describe_security_groups(
+                Filters=[{"Name": "group-name", "Values": [group_name]}]
+            )
+            security_groups = response.get("SecurityGroups", [])
+            if not security_groups:
+                logger.warning(f'[WARNING] security group "{group_name}" does not exist')
+                return False
+
+            group_id = security_groups[0]["GroupId"]
+
+        except ClientError as e:
+            logger.error(f'[FAIL] cannot describe security group "{group_name}" ({e})')
+            return False
+
+        # Attempt deletion
+        try:
+            self.client.delete_security_group(GroupId=group_id)
+        except ClientError as e:
+            logger.error(f'[FAIL] cannot delete security group "{group_name}" ({e})')
+            return False
+
+        logger.info(f'[SUCCESS] deleted security group "{group_name}"')
+        return True
+
     
