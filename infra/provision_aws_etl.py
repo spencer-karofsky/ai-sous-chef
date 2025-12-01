@@ -6,8 +6,7 @@ Description:
 
 Instructions:
     * Run via CLI:
-        cd ./ai-sous-chef/
-        python -m infra.provision_aws_etl
+        python main.py provision
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
@@ -38,7 +37,7 @@ def provision_aws_etl():
     vpc_network.create_subnet('10.0.1.0/24', subnet_name=AWS_RESOURCES['vpc_subnet_name'])
     vpc_subnet_id = vpc_network.subnet_id
 
-    # Internet Gateway, to enable internet access
+    # Internet Gateway (required for public internet access)
     vpc_network.create_internet_gateway()
 
     # Route Table with public route
@@ -103,8 +102,19 @@ def provision_aws_etl():
         user_data=EC2_USER_DATA_SCRIPT
     )
 
-    print('Provisioning complete!')
+    # Wait for public IP assignment
+    print("Waiting for public IP assignment...")
+    instance_id = ec2_instance_manager.instances[0]['InstanceId']
+    time.sleep(30)
+    
+    ips = ec2_instance_manager.list_instance_public_ips([instance_id])
+    public_ip = ips.get(instance_id)
+    
+    print("Provisioning complete!")
+    print("")
+    print("To SSH into your instance:")
+    print(f"  ssh -i <path-to-key.pem> ec2-user@{public_ip}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     provision_aws_etl()

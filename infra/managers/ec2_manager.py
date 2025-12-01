@@ -51,6 +51,16 @@ class EC2InstancesManager(EC2InstancesInterface):
                 'SubnetId': subnet_id,
                 'KeyName': key_name,
                 'SecurityGroupIds': security_group_ids,
+                'BlockDeviceMappings': [
+                    {
+                        'DeviceName': '/dev/xvda',
+                        'Ebs': {
+                            'VolumeSize': 30, # 30 GB
+                            'VolumeType': 'gp3',
+                            'DeleteOnTermination': True
+                        }
+                    }
+                ],
                 'TagSpecifications': [
                     {
                         'ResourceType': 'instance',
