@@ -15,6 +15,7 @@ Authors:
 import time
 import boto3
 from botocore.exceptions import ClientError
+import os
 
 from infra.config import AWS_RESOURCES
 from infra.managers.s3_manager import S3BucketManager, S3ObjectManager
@@ -115,6 +116,12 @@ def tear_down_aws_etl():
     # Delete key pair
     key_pairs = EC2KeyPairManager(ec2_client)
     key_pairs.delete_key_pair(AWS_RESOURCES['ec2_key_pair_name'])
+
+    # Delete local key file
+    local_key_path = os.path.expanduser(f"~/.ssh/{AWS_RESOURCES['ec2_key_pair_name']}.pem")
+    if os.path.exists(local_key_path):
+        os.remove(local_key_path)
+        print(f"Deleted local key: {local_key_path}")
 
     # Delete raw S3 bucket (keep clean bucket)
     raw_bucket = AWS_RESOURCES['s3_raw_bucket_name']
