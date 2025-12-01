@@ -111,10 +111,20 @@ class RecipesDatasetPreprocessor:
         """
         df = self.recipes_df
 
+        def is_missing(x):
+            if isinstance(x, list):
+                return False
+            try:
+                if pd.isna(x):
+                    return True
+            except:
+                return False
+            if x in ("", " ", "null", "NaN"):
+                return True
+            return False
+
         for col in df.columns:
-            df[col] = df[col].apply(
-                lambda x: None if (pd.isna(x) or x in ("", " ", "null", "NaN")) else x
-            )
+            df[col] = df[col].apply(lambda x: None if is_missing(x) else x)
 
         list_columns = [
             "Images", "Keywords", "RecipeIngredientParts",
