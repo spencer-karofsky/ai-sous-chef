@@ -15,6 +15,7 @@ Authors:
 import json
 import tempfile
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from infra.managers.s3_manager import S3ObjectManager
 from infra.config import AWS_RESOURCES
@@ -56,8 +57,11 @@ class RecipeJSONBuilder:
         """
         Uploads a single canonical recipe JSON to S3
         """
+        import threading
         try:
-            tmp_path = f'/home/ec2-user/recipe_{recipe_id}_temp.json'
+            # Use thread ID to avoid collisions
+            thread_id = threading.current_thread().ident
+            tmp_path = f'/home/ec2-user/recipe_{recipe_id}_{thread_id}_temp.json'
 
             with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(recipe_obj, f, indent=2, sort_keys=True)
@@ -126,11 +130,10 @@ class RecipeJSONBuilder:
 
     def build_all(self) -> tuple[int, int]:
         """
-        Runs the entire JSON-building process:
-        1. Load cleaned records from S3
-        2. Convert each to canonical format
-        3. Upload each as individual JSON to S3
+        Runs the entire JSON-building process with parallel uploads
         """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
         records = self.load_cleaned_records()
 
         if not records:
@@ -141,21 +144,26 @@ class RecipeJSONBuilder:
         uploaded = 0
         failed = 0
 
-        for rec in records:
+        def process_recipe(rec):
             try:
                 recipe_id = rec.get("RecipeId")
                 if not recipe_id:
-                    failed += 1
-                    continue
-
+                    return False
                 recipe_json = self._build_canonical_json(rec)
-                if self.upload_recipe(recipe_id, recipe_json):
+                return self.upload_recipe(recipe_id, recipe_json)
+            except Exception as e:
+                return False
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = {executor.submit(process_recipe, rec): rec for rec in records}
+            for future in as_completed(futures):
+                if future.result():
                     uploaded += 1
                 else:
                     failed += 1
-            except Exception as e:
-                print(f"[build_json] Error processing recipe {rec.get('RecipeId')}: {e}")
-                failed += 1
+                
+                if (uploaded + failed) % 5000 == 0:
+                    print(f"[build_json] Progress: {uploaded + failed}/{total}")
 
         print(f"[build_json] Successfully uploaded {uploaded}/{total} recipe JSON files to S3.")
         return uploaded, failed
@@ -165,7 +173,6 @@ def build_json():
     """Main entry point for building and uploading recipe JSONs"""
     builder = RecipeJSONBuilder()
     builder.build_all()
-
 
 if __name__ == "__main__":
     build_json()
