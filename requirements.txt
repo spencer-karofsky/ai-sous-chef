@@ -1,5 +1,5 @@
 kagglehub
 pandas
-torch
 boto3
 botocore
+requests

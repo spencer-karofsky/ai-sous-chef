@@ -5,7 +5,9 @@ Description:
     * Tears down AWS Infrastructure for the ETL pipeline (except the clean S3 bucket)
 
 Instructions:
-    python main.py teardown
+    * Run via CLI:
+        cd ./ai-sous-chef/
+        python -m infra.tear_down_aws_etl
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)

@@ -26,6 +26,7 @@ AWS_RESOURCES = {
         'arn:aws:iam::aws:policy/AmazonS3FullAccess',
         'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
         'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess',
+        'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess'
     ],
     
     # EC2
@@ -38,15 +39,20 @@ AWS_RESOURCES = {
 EC2_USER_DATA_SCRIPT = """#!/bin/bash
 set -e
 
+# Fetch Kaggle credentials from SSM
+mkdir -p /home/ec2-user/.kaggle
+aws ssm get-parameter --name /kaggle/credentials --with-decryption \
+    --query 'Parameter.Value' --output text --region us-east-1 > /home/ec2-user/.kaggle/kaggle.json
+chmod 600 /home/ec2-user/.kaggle/kaggle.json
+chown ec2-user:ec2-user /home/ec2-user/.kaggle/kaggle.json
+
 yum update -y
 yum install -y python3-pip git
 
 git clone https://github.com/spencer-karofsky/ai-sous-chef.git /home/ec2-user/ai-sous-chef
 cd /home/ec2-user/ai-sous-chef
-
 pip3 install -r requirements.txt
 
-# Run full ETL pipeline
 python3 main.py etl
 
 echo "ETL complete" > /home/ec2-user/etl_status.txt

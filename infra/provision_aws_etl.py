@@ -6,7 +6,8 @@ Description:
 
 Instructions:
     * Run via CLI:
-        python main.py provision
+        cd ./ai-sous-chef/
+        python -m infra.provision_aws_etl
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
