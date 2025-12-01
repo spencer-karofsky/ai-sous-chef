@@ -35,8 +35,7 @@ class RecipeJSONBuilder:
         Downloads cleaned JSONL from S3 and parses into list of dicts
         """
         try:
-            with tempfile.NamedTemporaryFile(suffix='.jsonl', delete=False) as tmp:
-                tmp_path = tmp.name
+            tmp_path = '/home/ec2-user/cleaned_records_temp.jsonl'
 
             self.s3.download_object(self.clean_bucket, object_key, tmp_path)
 
@@ -52,6 +51,25 @@ class RecipeJSONBuilder:
         except Exception as e:
             print(f'[build_json] Failed to load cleaned records: {e}')
             return []
+
+    def upload_recipe(self, recipe_id: int, recipe_obj: dict, prefix: str = 'recipes') -> bool:
+        """
+        Uploads a single canonical recipe JSON to S3
+        """
+        try:
+            tmp_path = f'/home/ec2-user/recipe_{recipe_id}_temp.json'
+
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                json.dump(recipe_obj, f, indent=2, sort_keys=True)
+
+            object_key = f'{prefix}/{recipe_id}.json'
+            success = self.s3.upload_object(self.clean_bucket, object_key, tmp_path)
+
+            os.remove(tmp_path)
+            return success
+        except Exception as e:
+            print(f'[build_json] Failed to upload recipe {recipe_id}: {e}')
+            return False
 
     def _build_canonical_json(self, record: dict) -> dict:
         """
@@ -105,24 +123,6 @@ class RecipeJSONBuilder:
         }
 
         return canonical
-
-    def upload_recipe(self, recipe_id: int, recipe_obj: dict, prefix: str = 'recipes') -> bool:
-        """
-        Uploads a single canonical recipe JSON to S3
-        """
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as tmp:
-                json.dump(recipe_obj, tmp, indent=2, sort_keys=True)
-                tmp_path = tmp.name
-
-            object_key = f'{prefix}/{recipe_id}.json'
-            success = self.s3.upload_object(self.clean_bucket, object_key, tmp_path)
-
-            os.remove(tmp_path)
-            return success
-        except Exception as e:
-            print(f'[build_json] Failed to upload recipe {recipe_id}: {e}')
-            return False
 
     def build_all(self) -> tuple[int, int]:
         """

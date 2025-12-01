@@ -114,7 +114,6 @@ def provision_aws_etl():
     print("")
     print("To SSH into EC2:")
     print(f"  ssh -i {ec2_key_pair.key_path} ec2-user@{public_ip}")
-    print('Wait at least 5 minutes to SSH into EC2 to allow the ETL pipeline to run uninterrupted.')
 
 
 if __name__ == "__main__":

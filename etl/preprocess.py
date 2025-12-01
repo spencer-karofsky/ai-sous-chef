@@ -39,22 +39,12 @@ class RecipesDatasetPreprocessor:
         self.recipes_df = None
 
     def load_from_s3(self, object_key: str = 'raw/recipes.csv') -> bool:
-        """
-        Downloads raw CSV from S3 and loads into DataFrame
-        Args:
-            object_key: S3 key for the raw recipes CSV
-        Return:
-            True/False to indicate success/failure
-        """
         try:
-            # Download to temp file
-            with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as tmp:
-                tmp_path = tmp.name
+            tmp_path = '/home/ec2-user/recipes_temp.csv'
             
             self.s3.download_object(self.raw_bucket, object_key, tmp_path)
             self.recipes_df = pd.read_csv(tmp_path)
-            
-            # Cleanup temp file
+
             os.remove(tmp_path)
             
             print(f'[preprocess] Loaded {len(self.recipes_df)} recipes from S3')
@@ -64,20 +54,12 @@ class RecipesDatasetPreprocessor:
             return False
 
     def save_to_s3(self, records: list[dict], object_key: str = 'clean/cleaned_records.jsonl') -> bool:
-        """
-        Saves cleaned records as JSONL to S3 clean bucket
-        Args:
-            records: list of cleaned recipe dictionaries
-            object_key: S3 key for the output file
-        Return:
-            True/False to indicate success/failure
-        """
         try:
-            # Write to temp file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False, encoding='utf-8') as tmp:
+            tmp_path = '/home/ec2-user/cleaned_records_temp.jsonl'
+            
+            with open(tmp_path, 'w', encoding='utf-8') as f:
                 for rec in records:
-                    tmp.write(json.dumps(rec) + '\n')
-                tmp_path = tmp.name
+                    f.write(json.dumps(rec) + '\n')
             
             # Upload to S3
             self.s3.upload_object(self.clean_bucket, object_key, tmp_path)
