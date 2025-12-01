@@ -131,9 +131,7 @@ class RecipeJSONBuilder:
     def build_all(self) -> tuple[int, int]:
         """
         Runs the entire JSON-building process with parallel uploads
-        """
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
+        """        
         records = self.load_cleaned_records()
 
         if not records:
@@ -154,7 +152,7 @@ class RecipeJSONBuilder:
             except Exception as e:
                 return False
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=500) as executor:
             futures = {executor.submit(process_recipe, rec): rec for rec in records}
             for future in as_completed(futures):
                 if future.result():
