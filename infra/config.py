@@ -33,7 +33,7 @@ AWS_RESOURCES = {
     'ec2_key_pair_name': 'ai-sous-chef-key-pair',
     'ec2_instance_name': 'ai-sous-chef-etl',
     'ec2_image_id': 'ami-0fa3fe0fa7920f68e', # Amazon Linux 2023
-    'ec2_instance_type': 't3.small',
+    'ec2_instance_type': 't3.medium',
 }
 
 EC2_USER_DATA_SCRIPT = """#!/bin/bash
