@@ -38,12 +38,12 @@ def provision_aws_etl():
     vpc_network.create_subnet('10.0.1.0/24', subnet_name=AWS_RESOURCES['vpc_subnet_name'])
     vpc_subnet_id = vpc_network.subnet_id
 
-    # Internet Gateway (required for public internet access)
+    # Internet Gateway, to enable internet access
     vpc_network.create_internet_gateway()
 
     # Route Table with public route
     vpc_network.create_route_table()
-    vpc_network.add_route('0.0.0.0/0')  # Route all traffic to IGW
+    vpc_network.add_route('0.0.0.0/0') # Route all traffic to IGW
     vpc_network.associate_route_table()
 
     # Security Group
