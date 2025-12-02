@@ -136,8 +136,7 @@ def _launch_ec2() -> None:
     if success:
         instance_id = ec2_manager.instances[0]['InstanceId']
         print(f'[SUCCESS] Launched dynamodb-loader: {instance_id}')
-        print(f'[INFO] Instance will auto-shutdown when complete')
-        print(f'[INFO] Logs at /var/log/dynamodb-loader.log')
+        print(f'[INFO] View logs by running: sudo tail -f /var/log/dynamodb-loader.log')
         
         # Wait for public IP
         time.sleep(30)

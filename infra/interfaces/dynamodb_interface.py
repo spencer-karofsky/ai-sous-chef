@@ -14,7 +14,7 @@ Item Manager:
 4. Delete Item
 5. Update Item
 """
-from typing import Protocol, List, Dict
+from typing import Protocol, List, Dict, Optional
 
 class DynamoDBTableInterface(Protocol):
     def create_table(
@@ -63,7 +63,7 @@ class DynamoDBItemInterface(Protocol):
         self,
         table_name: str,
         key: Dict,
-    ) -> Dict | None:
+    ) -> Optional[Dict]:
         raise NotImplementedError
 
     def query(
