@@ -218,12 +218,12 @@ def create_recipes_table() -> None:
 
         # Write this batch to DynamoDB
         if items:
-            success = dynamodb_item_manager.batch_write_items(
+            written, failed = dynamodb_item_manager.batch_write_items(
                 table_name=AWS_RESOURCES['dynamodb_recipes_table_name'],
                 items=items
             )
-            if success:
-                total_uploaded += len(items)
+            total_uploaded += written
+            total_failed += failed
 
         print(f'[INFO] [create_recipes_table] Progress: {batch_start + len(batch_keys)}/{len(recipe_keys)}')
 

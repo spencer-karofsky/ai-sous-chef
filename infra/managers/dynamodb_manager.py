@@ -335,24 +335,15 @@ class DynamoDBItemManager(DynamoDBItemInterface):
         table_name: str,
         items: List[Dict],
         max_retries: int = 5,
-    ) -> bool:
+    ) -> tuple:
         """
         Batch writes multiple items to the table (max 25 per batch)
 
-        Docs:
-            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/batch_write_item.html
-
-        Args:
-            table_name: the table name
-            items: list of dictionaries to write
-            max_retries: max retry attempts for unprocessed items
-
         Returns:
-            True/False to indicate success/failure
+            Tuple of (total_written, total_failed)
         """
-        BATCH_SIZE = 25 # Maximum allowed for DynamoDB
+        BATCH_SIZE = 25
 
-        # Chunk items into batches of 25
         batches = [items[i:i + BATCH_SIZE] for i in range(0, len(items), BATCH_SIZE)]
         total_written = 0
         total_failed = 0
@@ -365,6 +356,7 @@ class DynamoDBItemManager(DynamoDBItemInterface):
 
             request_items = {table_name: put_requests}
             retries = 0
+            batch_size = len(batch)
 
             while request_items and retries < max_retries:
                 try:
@@ -372,25 +364,34 @@ class DynamoDBItemManager(DynamoDBItemInterface):
                     unprocessed = response.get('UnprocessedItems', {})
 
                     if not unprocessed:
-                        total_written += len(batch)
+                        # All remaining items succeeded
+                        remaining = len(request_items.get(table_name, []))
+                        total_written += remaining
+                        request_items = {}
                         break
+
+                    # Some succeeded, some didn't
+                    succeeded = len(request_items.get(table_name, [])) - len(unprocessed.get(table_name, []))
+                    total_written += succeeded
 
                     request_items = unprocessed
                     retries += 1
-                    sleep(2 ** retries * 0.1) # Exponential backoff
+                    sleep(2 ** retries * 0.1)
 
                 except ClientError as e:
                     logger.error(f'[FAIL] Batch write failed ({e})')
-                    total_failed += len(batch)
+                    total_failed += len(request_items.get(table_name, []))
+                    request_items = {}
                     break
 
+            # Count any items still unprocessed after retries
             if request_items:
                 failed_count = len(request_items.get(table_name, []))
                 total_failed += failed_count
                 logger.warning(f'[WARNING] {failed_count} items unprocessed after retries')
 
         logger.info(f'[SUCCESS] Batch write complete: {total_written} written, {total_failed} failed')
-        return total_failed == 0
+        return (total_written, total_failed)
 
     def get_item(
         self,
