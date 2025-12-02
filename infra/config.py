@@ -66,7 +66,7 @@ python main.py etl
 echo "ETL complete" > /home/ec2-user/etl_status.txt
 """
 
-EC2_TABLE_STARTUP_SCRIPT = f"""#!/bin/bash
+EC2_TABLE_STARTUP_SCRIPT = """#!/bin/bash
 exec > /var/log/dynamodb-loader.log 2>&1
 set -x
 
@@ -79,6 +79,4 @@ cd ai-sous-chef
 pip3 install boto3
 
 python3 -m infra.create_recipes_table --run
-
-shutdown -h now
 """
