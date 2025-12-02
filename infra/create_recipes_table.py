@@ -27,16 +27,18 @@ from infra.config import AWS_RESOURCES, EC2_TABLE_STARTUP_SCRIPT
 def _json_recipe_to_table_entry(json_recipe: Dict) -> Dict:
     """
     Transform individual JSON recipe to DynamoDB entry
-    
-    Args:
-        json_recipe: canonical JSON recipe from S3
-        
-    Returns:
-        Flattened dict for DynamoDB (searchable fields + s3 pointer)
     """
     recipe_id = str(json_recipe.get('id'))
     
-    return {
+    def clean_value(val):
+        """Return None for NaN/null values so they get filtered out"""
+        if val is None:
+            return None
+        if isinstance(val, float) and math.isnan(val):
+            return None
+        return val
+    
+    item = {
         'recipe_id': recipe_id,
         'name': json_recipe.get('name', ''),
         'description': json_recipe.get('description', ''),
@@ -45,17 +47,20 @@ def _json_recipe_to_table_entry(json_recipe: Dict) -> Dict:
         'author': json_recipe.get('author', ''),
         's3_key': f"recipes/{recipe_id}.json",
         # Flatten nutrition for filtering
-        'calories': json_recipe.get('nutrition', {}).get('calories'),
-        'protein': json_recipe.get('nutrition', {}).get('protein'),
-        'carbs': json_recipe.get('nutrition', {}).get('carbs'),
-        'fat': json_recipe.get('nutrition', {}).get('fat'),
+        'calories': clean_value(json_recipe.get('nutrition', {}).get('calories')),
+        'protein': clean_value(json_recipe.get('nutrition', {}).get('protein')),
+        'carbs': clean_value(json_recipe.get('nutrition', {}).get('carbs')),
+        'fat': clean_value(json_recipe.get('nutrition', {}).get('fat')),
         # Flatten metadata for filtering
-        'rating': json_recipe.get('metadata', {}).get('aggregated_rating'),
-        'review_count': json_recipe.get('metadata', {}).get('review_count'),
+        'rating': clean_value(json_recipe.get('metadata', {}).get('aggregated_rating')),
+        'review_count': clean_value(json_recipe.get('metadata', {}).get('review_count')),
         'prep_time': json_recipe.get('metadata', {}).get('prep_time'),
         'cook_time': json_recipe.get('metadata', {}).get('cook_time'),
         'total_time': json_recipe.get('metadata', {}).get('total_time'),
     }
+    
+    # Remove None values
+    return {k: v for k, v in item.items() if v is not None}
 
 def _launch_ec2() -> None:
     """
