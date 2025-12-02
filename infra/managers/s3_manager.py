@@ -197,40 +197,54 @@ class S3ObjectManager(S3ObjectInterface):
         logger.info(f'[SUCCESS] deleted object "{object_key}" in bucket "{bucket_name}"')
         return True
     
-    def list_objects(self, bucket_name: str) -> List[Tuple[str]]:
-        """List objects in a S3 Bucket
+    def list_objects(self, bucket_name: str, prefix: str = '') -> List[Tuple]:
+        """List all objects in a S3 Bucket using pagination
 
-        Limited to 1000 objects maximum
         Docs:
-            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_objects.html
+            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_objects_v2.html
         Args:
             bucket_name: the S3 Bucket name
+            prefix: optional prefix to filter objects
         Return:
             List of tuples of the form [(object name/key, last modified date and time, object size in MB), ...]
         """
         try:
-            response = self._client.list_objects_v2(Bucket=bucket_name)
+            paginator = self._client.get_paginator('list_objects_v2')
+            page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+
+            objects_list = []
+            for page in page_iterator:
+                for obj in page.get('Contents', []):
+                    try:
+                        key = obj['Key']
+                        last_modified = obj['LastModified']
+                        size_mb = round(obj['Size'] / (1024 * 1024), 2)
+                        objects_list.append((key, last_modified, size_mb))
+                    except KeyError as e:
+                        logger.warning(f'[WARN] Malformed object metadata in bucket "{bucket_name}": missing {e}')
+                        continue
+
+            logger.info(f'[SUCCESS] Listed {len(objects_list)} objects in "{bucket_name}"')
+            return objects_list
         except ClientError as e:
             logger.error(f'[FAIL] cannot list objects in bucket "{bucket_name}" ({e})')
             return []
-
-        contents = response.get('Contents', [])
-        if not contents:
-            logger.info(f'[INFO] bucket "{bucket_name}" is empty')
-            return []
-
-        objects_list = []
-        for obj in contents:
-            try:
-                key = obj['Key']
-                last_modified = obj['LastModified']
-                size_mb = round(obj['Size'] / (1024 * 1024), 2)
-                objects_list.append((key, last_modified, size_mb))
-            except KeyError as e:
-                logger.warning(f'[WARN] Malformed object metadata in bucket "{bucket_name}": missing {e}')
-                continue
+    
+    def get_object(self, bucket_name: str, object_key: str) -> bytes:
+        """
+        Returns object contents as bytes without writing to disk
         
-        if len(objects_list) == 1000:
-            logger.warning(f'[WARNING] Only first 1000 objects returned')
-
-        return objects_list
+        Docs:
+            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_object.html
+        Args:
+            bucket_name: the S3 bucket name
+            object_key: the key/identifier of the object
+        Return:
+            Object contents as bytes, or None if failed
+        """
+        try:
+            response = self._client.get_object(Bucket=bucket_name, Key=object_key)
+            return response['Body'].read()
+        except ClientError as e:
+            logger.error(f'[FAIL] Cannot get object {object_key} ({e})')
+            return None
