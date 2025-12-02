@@ -15,10 +15,11 @@ Authors:
 import json
 import boto3
 from typing import Dict
+import time
 
 from infra.managers.s3_manager import S3BucketManager, S3ObjectManager
 from infra.managers.dynamodb_manager import DynamoDBTableManager, DynamoDBItemManager
-from infra.managers.ec2_manager import EC2InstancesManager
+from infra.managers.ec2_manager import EC2InstancesManager, EC2KeyPairManager
 from infra.managers.iam_manager import IAMRoleManager
 from infra.managers.vpc_manager import VPCSetupManager, VPCNetworkManager, VPCSecurityManager
 from infra.config import AWS_RESOURCES, EC2_TABLE_STARTUP_SCRIPT
@@ -58,29 +59,68 @@ def _json_recipe_to_table_entry(json_recipe: Dict) -> Dict:
 
 def _launch_ec2() -> None:
     """
-    Launches EC2 instance to run the loader
+    Provisions VPC infrastructure and launches EC2 instance to run the loader
     """
     ec2_client = boto3.client('ec2', region_name='us-east-1')
-    
-    # Look up VPC resources by name
+    iam_client = boto3.client('iam', region_name='us-east-1')
+
+    # VPC
     vpc_setup = VPCSetupManager(ec2_client)
-    vpc_setup.get_vpc_by_name(AWS_RESOURCES['vpc_name'])
+    vpc_setup.create_vpc(AWS_RESOURCES['vpc_name'])
     vpc_id = vpc_setup.get_vpc_id()
-    
+
+    # Subnet
     vpc_network = VPCNetworkManager(ec2_client, vpc_id)
-    vpc_network.get_subnet_by_name(AWS_RESOURCES['vpc_subnet_name'])
+    vpc_network.create_subnet('10.0.1.0/24', subnet_name=AWS_RESOURCES['vpc_subnet_name'])
     subnet_id = vpc_network.subnet_id
-    
+
+    # Internet Gateway
+    vpc_network.create_internet_gateway()
+
+    # Route Table
+    vpc_network.create_route_table()
+    vpc_network.add_route('0.0.0.0/0')
+    vpc_network.associate_route_table()
+
+    # Security Group
     vpc_security = VPCSecurityManager(
         ec2_client,
         vpc_id,
         description=AWS_RESOURCES['vpc_security_description'],
         group_name=AWS_RESOURCES['vpc_security_group_name']
     )
-    vpc_security.get_security_group_by_name()
+    vpc_security.create_security_group(egress=True, ssh=True)
     security_group_id = vpc_security.security_group_id
 
-    # Launch instance
+    # IAM
+    ec2_trust_policy = json.dumps({
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "ec2.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        }]
+    })
+
+    iam_manager = IAMRoleManager(iam_client)
+    iam_manager.create_role(AWS_RESOURCES['ec2_iam_role_name'], ec2_trust_policy)
+    for policy_arn in AWS_RESOURCES['ec2_iam_policies']:
+        iam_manager.attach_policy(AWS_RESOURCES['ec2_iam_role_name'], policy_arn)
+    iam_manager.create_instance_profile(AWS_RESOURCES['ec2_instance_profile_name'])
+    iam_manager.add_role_to_instance_profile(
+        AWS_RESOURCES['ec2_instance_profile_name'],
+        AWS_RESOURCES['ec2_iam_role_name']
+    )
+
+    # Wait for IAM propagation
+    print("[INFO] Waiting for IAM instance profile to propagate...")
+    time.sleep(15)
+
+    # Key Pair
+    ec2_key_pair = EC2KeyPairManager(ec2_client)
+    ec2_key_pair.create_key_pair(AWS_RESOURCES['ec2_key_pair_name'])
+
+    # Launch Instance
     ec2_manager = EC2InstancesManager(ec2_client)
     success = ec2_manager.launch_instance(
         instance_name='dynamodb-loader',
@@ -98,6 +138,13 @@ def _launch_ec2() -> None:
         print(f'[SUCCESS] Launched dynamodb-loader: {instance_id}')
         print(f'[INFO] Instance will auto-shutdown when complete')
         print(f'[INFO] Logs at /var/log/dynamodb-loader.log')
+        
+        # Wait for public IP
+        time.sleep(30)
+        ips = ec2_manager.list_instance_public_ips([instance_id])
+        public_ip = ips.get(instance_id)
+        if public_ip:
+            print(f'[INFO] SSH: ssh -i ~/.ssh/{AWS_RESOURCES["ec2_key_pair_name"]}.pem ec2-user@{public_ip}')
     else:
         print('[FAIL] Could not launch instance')
 
