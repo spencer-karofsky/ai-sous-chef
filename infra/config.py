@@ -26,7 +26,8 @@ AWS_RESOURCES = {
         'arn:aws:iam::aws:policy/AmazonS3FullAccess',
         'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
         'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess',
-        'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess'
+        'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess',
+        'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
     ],
     
     # EC2
@@ -34,6 +35,10 @@ AWS_RESOURCES = {
     'ec2_instance_name': 'ai-sous-chef-etl',
     'ec2_image_id': 'ami-0fa3fe0fa7920f68e', # Amazon Linux 2023
     'ec2_instance_type': 't3.medium',
+
+    # DynamoDB
+    'dynamodb_recipes_table_name': 'ai-sous-chef-recipes',
+    'dynamodb_recipes_table_partition_key': 'recipe_id'
 }
 
 EC2_USER_DATA_SCRIPT = """#!/bin/bash
@@ -59,4 +64,21 @@ pip install -r requirements.txt
 python main.py etl
 
 echo "ETL complete" > /home/ec2-user/etl_status.txt
+"""
+
+EC2_TABLE_STARTUP_SCRIPT = f"""#!/bin/bash
+exec > /var/log/dynamodb-loader.log 2>&1
+set -x
+
+cd /home/ec2-user
+yum install -y git python3-pip
+
+git clone https://github.com/spencer-karofsky/ai-sous-chef.git
+cd ai-sous-chef
+
+pip3 install boto3
+
+python3 -m infra.create_recipes_table --run
+
+shutdown -h now
 """

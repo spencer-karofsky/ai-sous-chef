@@ -125,6 +125,29 @@ class VPCSetupManager(VPCSetupInterface):
             
             logger.info(f'[SUCCESS] deleted VPC "{vpc_id}"')
             return True
+        
+    def get_vpc_by_name(self, vpc_name: str) -> bool:
+        """Look up existing VPC by name and store its ID
+        Args:
+            vpc_name: the Name tag of the VPC
+        Return:
+            True/False to indicate success/failure
+        """
+        try:
+            response = self.client.describe_vpcs(
+                Filters=[{'Name': 'tag:Name', 'Values': [vpc_name]}]
+            )
+            vpcs = response.get('Vpcs', [])
+            if not vpcs:
+                logger.error(f'[FAIL] VPC "{vpc_name}" not found')
+                return False
+            
+            self.vpc_id = vpcs[0]['VpcId']
+            logger.info(f'[SUCCESS] Found VPC "{vpc_name}" with ID {self.vpc_id}')
+            return True
+        except ClientError as e:
+            logger.error(f'[FAIL] Cannot describe VPCs ({e})')
+            return False
 
 class VPCNetworkManager(VPCNetworkInterface):
     def __init__(self, ec2_client: BaseClient, vpc_id: Optional[str]):
@@ -198,6 +221,32 @@ class VPCNetworkManager(VPCNetworkInterface):
             return False
         logger.info(f'[SUCCESS] attached internet gateway')
         return True
+    
+    def get_subnet_by_name(self, subnet_name: str) -> bool:
+        """Look up existing subnet by name and store its ID
+        Args:
+            subnet_name: the Name tag of the subnet
+        Return:
+            True/False to indicate success/failure
+        """
+        try:
+            response = self.client.describe_subnets(
+                Filters=[
+                    {'Name': 'tag:Name', 'Values': [subnet_name]},
+                    {'Name': 'vpc-id', 'Values': [self.vpc_id]}
+                ]
+            )
+            subnets = response.get('Subnets', [])
+            if not subnets:
+                logger.error(f'[FAIL] Subnet "{subnet_name}" not found')
+                return False
+            
+            self.subnet_id = subnets[0]['SubnetId']
+            logger.info(f'[SUCCESS] Found subnet "{subnet_name}" with ID {self.subnet_id}')
+            return True
+        except ClientError as e:
+            logger.error(f'[FAIL] Cannot describe subnets ({e})')
+            return False
     
     def create_internet_gateway(self) -> bool:
         """Create and attach internet gateway
@@ -476,3 +525,27 @@ class VPCSecurityManager(VPCSecurityInterface):
 
         logger.info(f'[SUCCESS] deleted security group "{group_name}"')
         return True
+    
+    def get_security_group_by_name(self) -> bool:
+        """Look up existing security group by name and store its ID
+        Return:
+            True/False to indicate success/failure
+        """
+        try:
+            response = self.client.describe_security_groups(
+                Filters=[
+                    {'Name': 'group-name', 'Values': [self.group_name]},
+                    {'Name': 'vpc-id', 'Values': [self.vpc_id]}
+                ]
+            )
+            groups = response.get('SecurityGroups', [])
+            if not groups:
+                logger.error(f'[FAIL] Security group "{self.group_name}" not found')
+                return False
+            
+            self.security_group_id = groups[0]['GroupId']
+            logger.info(f'[SUCCESS] Found security group "{self.group_name}" with ID {self.security_group_id}')
+            return True
+        except ClientError as e:
+            logger.error(f'[FAIL] Cannot describe security groups ({e})')
+            return False
