@@ -5,7 +5,7 @@ from infra.utils.logger import logger
 from infra.interfaces.dynamodb_interface import DynamoDBTableInterface, DynamoDBItemInterface
 from botocore.exceptions import ClientError
 from botocore.client import BaseClient
-from typing import List, Dict
+from typing import List, Dict, Optional
 from time import sleep
 
 class DynamoDBTableManager(DynamoDBTableInterface):
@@ -396,7 +396,7 @@ class DynamoDBItemManager(DynamoDBItemInterface):
         self,
         table_name: str,
         key: Dict,
-    ) -> Dict | None:
+    ) -> Optional[Dict]:
         """
         Retrieves a single item by its key
 
