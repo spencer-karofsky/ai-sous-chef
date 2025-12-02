@@ -5,9 +5,9 @@ Description:
     * Creates the DynamoDB recipes table
 
 Instructions:
-    * Run via CLI:
+    * Run via CLI (Local):
         cd ./ai-sous-chef/
-        python -m infra.create_recipes_table --run
+        python -m infra.create_recipes_table
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)

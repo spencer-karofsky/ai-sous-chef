@@ -82,19 +82,19 @@ class S3BucketManager(S3BucketInterface):
             return False
     
     def list_buckets(self) -> List[str]:
-        """List S3 Directory Buckets
+        """List S3 Buckets
         Docs:
-            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_directory_buckets.html
+            https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/list_buckets.html
         Returns:
-            list of S3 directory bucket names
+            list of S3 bucket names
         """
         try:
-            response = self._client.list_directory_buckets()
+            response = self._client.list_buckets()
         except ClientError as e:
             logger.error(f'[FAIL] cannot retrieve bucket names ({e})')
             return []
-        logger.info(f'[SUCCESS] retrieved S3 directory buckets')
-        return response['Buckets']
+        logger.info(f'[SUCCESS] retrieved S3 buckets')
+        return [bucket['Name'] for bucket in response.get('Buckets', [])]
 
 class S3ObjectManager(S3ObjectInterface):
     def __init__(self):
