@@ -16,6 +16,7 @@ import json
 import boto3
 from typing import Dict
 import time
+import math
 
 from infra.managers.s3_manager import S3BucketManager, S3ObjectManager
 from infra.managers.dynamodb_manager import DynamoDBTableManager, DynamoDBItemManager
