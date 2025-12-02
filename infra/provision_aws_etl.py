@@ -113,11 +113,11 @@ def provision_aws_etl():
     print('Provisioning complete!')
     print('')
     print('To SSH into EC2:')
-    print(f'  ssh -i {ec2_key_pair.key_path} ec2-user@{public_ip}')
+    print(f'   ssh -i {ec2_key_pair.key_path} ec2-user@{public_ip}')
     print('To see debugging information from inside EC2:')
-    print(' sudo tail -f /var/log/cloud-init-output.log')
+    print('   sudo tail -f /var/log/cloud-init-output.log')
     print(f'To view uploading progress:')
-    print(' aws s3 ls s3://ai-sous-chef-data-clean/recipes/ | wc -l')
+    print('   aws s3 ls s3://ai-sous-chef-data-clean/recipes/ | wc -l')
 
 
 if __name__ == '__main__':
