@@ -13,6 +13,7 @@ Instructions:
         python main.py build # Just build individual JSONs
         python main.py etl # Run full ETL (download + preprocess + build)
         python main.py all # Provision + full ETL
+        python main.py search # Full recipe pipeline
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)

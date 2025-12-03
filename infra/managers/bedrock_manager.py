@@ -305,8 +305,9 @@ Create a practical, delicious recipe that matches the request."""
             response = self.invoke_model_with_system(
                 prompt=f"Create a recipe for: {user_input}",
                 system_prompt=system_prompt,
+                #model_id='anthropic.claude-3-5-sonnet-20240620-v1:0',
                 max_tokens=1024,
-                temperature=0.7
+                temperature=0.4
             )
 
             if not response:
