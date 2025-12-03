@@ -486,6 +486,7 @@ class DynamoDBItemManager(DynamoDBItemInterface):
         table_name: str,
         filter_expression: str = None,
         expression_values: Dict = None,
+        expression_names: Dict = None,
         limit: int = None,
     ) -> List[Dict]:
         """
@@ -510,6 +511,8 @@ class DynamoDBItemManager(DynamoDBItemInterface):
                 kwargs['FilterExpression'] = filter_expression
             if expression_values:
                 kwargs['ExpressionAttributeValues'] = self._serialize_item(expression_values)
+            if expression_names:
+                kwargs['ExpressionAttributeNames'] = expression_names
             if limit:
                 kwargs['Limit'] = limit
 
@@ -518,12 +521,10 @@ class DynamoDBItemManager(DynamoDBItemInterface):
                 response = self.client.scan(**kwargs)
                 items.extend(response.get('Items', []))
 
-                # Stop if limit is reached
                 if limit and len(items) >= limit:
                     items = items[:limit]
                     break
 
-                # Handle pagination
                 if 'LastEvaluatedKey' not in response:
                     break
                 kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']

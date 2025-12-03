@@ -50,6 +50,11 @@ def all():
     provision()
     etl()
 
+def search():
+    """Interactive recipe search"""
+    from recipe_search import recipe_search
+    recipe_search()
+
 if __name__ == "__main__":
     commands = {
         "provision": provision,
@@ -58,6 +63,7 @@ if __name__ == "__main__":
         "build": build,
         "etl": etl,
         "all": all,
+        "search": search
     }
 
     command = sys.argv[1] if len(sys.argv) > 1 else "all"
