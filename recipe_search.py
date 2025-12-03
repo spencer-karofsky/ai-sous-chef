@@ -58,9 +58,9 @@ def _build_filter(params: dict) -> tuple:
     """
     filter_parts = []
     expression_values = {}
-    expression_names = {'#n': 'name'}  # 'name' is a reserved word
+    expression_names = {'#n': 'name'} # name is a reserved word
 
-    # Keywords search name, description, AND keywords list
+    # Keywords search name, description, and keywords list
     keyword_parts = []
     for i, kw in enumerate(params.get('keywords', [])):
         keyword_parts.append(f'contains(keywords, :kw{i})')
@@ -71,7 +71,6 @@ def _build_filter(params: dict) -> tuple:
     if keyword_parts:
         filter_parts.append(f"({' OR '.join(keyword_parts)})")
 
-    # Need to add expression_attribute_names for reserved word 'name'
     expression_names = {'#n': 'name'}
 
     if params.get('category'):
@@ -133,7 +132,7 @@ def recipe_search() -> None:
             expression_names=expression_names
         )
 
-        # No results - offer to generate
+        # No Results; Offer to Generate
         if not results:
             print("\nNo recipes found matching your request.")
             generate = input("Want me to create a recipe for you? (y/n) > ").strip().lower()
@@ -188,7 +187,6 @@ def recipe_search() -> None:
             print("Failed to process recipe.\n")
 
     print("\nGoodbye!")
-
 
 if __name__ == '__main__':
     recipe_search()

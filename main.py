@@ -2,72 +2,30 @@
 main.py
 
 Description:
-    * Provisions AWS
-    * Runs ETL
+    * AI Sous Chef - Recipe search and generation
 
 Instructions:
     * Run via CLI:
-        python main.py provision # Just provision AWS infra
-        python main.py download # Just download data to S3
-        python main.py preprocess # Just run preprocessing
-        python main.py build # Just build individual JSONs
-        python main.py etl # Run full ETL (download + preprocess + build)
-        python main.py all # Provision + full ETL
-        python main.py search # Full recipe pipeline
+        python main.py # Start recipe search
+        python main.py search # Start recipe search (same, but explicit)
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
 import sys
-
-def provision():
-    from infra.provision_aws_etl import provision_aws_etl
-    provision_aws_etl()
-    print("Provisioning complete")
-
-def download():
-    from data.data_download import download_and_upload_to_s3
-    download_and_upload_to_s3()
-    print("Data download complete")
-
-def preprocess():
-    from etl.preprocess import run_preprocessing
-    run_preprocessing()
-    print("Preprocessing complete")
-
-def build():
-    from etl.build_json import build_json
-    build_json()
-    print("Build JSON complete")
-
-def etl():
-    """Run full ETL pipeline: download -> preprocess -> build"""
-    download()
-    preprocess()
-    build()
-    print("Full ETL pipeline complete")
-
-def all():
-    provision()
-    etl()
+from recipe_search import recipe_search
 
 def search():
     """Interactive recipe search"""
-    from recipe_search import recipe_search
     recipe_search()
 
 if __name__ == "__main__":
     commands = {
-        "provision": provision,
-        "download": download,
-        "preprocess": preprocess,
-        "build": build,
-        "etl": etl,
-        "all": all,
-        "search": search
+        "search": search,
     }
 
-    command = sys.argv[1] if len(sys.argv) > 1 else "all"
+    command = sys.argv[1] if len(sys.argv) > 1 else "search"
+
     if command in commands:
         commands[command]()
     else:
