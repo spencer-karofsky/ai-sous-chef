@@ -21,11 +21,15 @@ class BedrockManager(BedrockInterface):
             bedrock_client: the injected boto3 bedrock-runtime client
         """
         self.client = bedrock_client
+        self.models_dict = {
+            'claude-haiku-3': 'anthropic.claude-3-haiku-20240307-v1:0',
+            'claude-sonnet-3-5': 'anthropic.claude-3-5-sonnet-20240620-v1:0'
+        }
 
     def invoke_model(
         self,
         prompt: str,
-        model_id: str = 'anthropic.claude-3-haiku-20240307-v1:0',
+        model_id: str = 'claude-haiku-3',
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> Optional[str]:
@@ -75,7 +79,7 @@ class BedrockManager(BedrockInterface):
         self,
         prompt: str,
         system_prompt: str,
-        model_id: str = 'anthropic.claude-3-haiku-20240307-v1:0',
+        model_id: str = 'claude-haiku-3',
         max_tokens: int = 1024,
         temperature: float = 0.7,
     ) -> Optional[str]:
@@ -123,33 +127,36 @@ class BedrockManager(BedrockInterface):
     def extract_search_params(
         self,
         user_input: str,
+        model: str = 'claude-haiku-3'
     ) -> Optional[Dict]:
         """
         Parse natural language into structured search params
 
         Args:
             user_input: natural language request, e.g. "quick chicken dinner"
+            model: the Bedrock model
 
         Returns:
             Dict with keys: keywords, category, max_calories, max_total_time
         """
         system_prompt = """You extract structured search parameters from food requests.
+        Return ONLY valid JSON with these optional fields:
+        - keywords: list of ingredient/dish/cuisine keywords (lowercase)
+        - category: one of Breakfast, Lunch, Dinner, Dessert, Snack, Appetizer
+        - max_calories: integer if user mentions diet/light/healthy
+        - max_total_time: ISO 8601 duration if user mentions quick/fast (e.g. PT30M)
 
-Return ONLY valid JSON with these optional fields:
-- keywords: list of ingredient/dish/cuisine keywords (lowercase)
-- category: one of Breakfast, Lunch, Dinner, Dessert, Snack, Appetizer
-- max_calories: integer if user mentions diet/light/healthy
-- max_total_time: ISO 8601 duration if user mentions quick/fast (e.g. PT30M)
-
-Example input: "quick healthy chicken dinner"
-Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 500, "max_total_time": "PT30M"}"""
+        Example input: "quick healthy chicken dinner"
+        Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 500, "max_total_time": "PT30M"}"""
 
         try:
+            model_id = self.models_dict[model]
             response = self.invoke_model_with_system(
                 prompt=user_input,
                 system_prompt=system_prompt,
+                model_id=model_id,
                 max_tokens=256,
-                temperature=0.3
+                temperature=0.2
             )
 
             if not response:
@@ -169,6 +176,7 @@ Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 
         user_input: str,
         recipe_options: List[Dict],
         top_n: int = 5,
+        model: str = 'claude-haiku-3'
     ) -> List[Dict]:
         """
         Rank recipes by relevance to user request
@@ -177,6 +185,7 @@ Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 
             user_input: original user request
             recipe_options: list of recipe metadata from DynamoDB
             top_n: number of top results to return
+            model: the Bedrock LLM
 
         Returns:
             List of top recipes ordered by relevance
@@ -188,10 +197,8 @@ Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 
             return recipe_options
 
         system_prompt = """You rank recipes by relevance to a user's request.
-
-Given a user request and list of recipes, return the indices of the most relevant recipes in order of best match.
-
-Return ONLY valid JSON: {"ranked_indices": [0, 3, 1, ...]}"""
+        Given a user request and list of recipes, return the indices of the most relevant recipes in order of best match.
+        Return ONLY valid JSON: {"ranked_indices": [0, 3, 1, ...]}"""
 
         # Build recipe summary for ranking (keep it concise)
         recipe_summaries = []
@@ -200,16 +207,16 @@ Return ONLY valid JSON: {"ranked_indices": [0, 3, 1, ...]}"""
             recipe_summaries.append(summary)
 
         prompt = f"""User request: {user_input}
-
-Recipes:
-{chr(10).join(recipe_summaries)}
-
-Return the indices of the top {top_n} most relevant recipes."""
+        Recipes:
+        {chr(10).join(recipe_summaries)}
+        Return the indices of the top {top_n} most relevant recipes."""
 
         try:
+            model_id = self.models_dict[model]
             response = self.invoke_model_with_system(
                 prompt=prompt,
                 system_prompt=system_prompt,
+                model_id=model_id,
                 max_tokens=128,
                 temperature=0.3
             )
@@ -231,35 +238,39 @@ Return the indices of the top {top_n} most relevant recipes."""
     def format_recipe(
         self,
         recipe: Dict,
+        model: str = 'claude-haiku-3'
     ) -> Optional[Dict]:
         """
         Normalize recipe to uniform output structure
 
         Args:
             recipe: full recipe from S3
+            model: the Bedrock model
 
         Returns:
             Cleaned and formatted recipe dict
         """
         system_prompt = """You format recipes into a clean, consistent structure.
-Return ONLY valid JSON with these fields:
-- name: string
-- description: brief 1-2 sentence description
-- prep_time: human readable (e.g. "15 minutes")
-- cook_time: human readable
-- total_time: human readable
-- servings: string
-- ingredients: list of strings (e.g. ["1 cup flour", "2 eggs"])
-- instructions: list of step strings
-- nutrition: {calories, protein, carbs, fat} as strings with units
-Fill in reasonable values for any missing fields based on the recipe context."""
+        Return ONLY valid JSON with these fields:
+        - name: string
+        - description: brief 1-2 sentence description
+        - prep_time: human readable (e.g. "15 minutes")
+        - cook_time: human readable
+        - total_time: human readable
+        - servings: string
+        - ingredients: list of strings (e.g. ["1 cup flour", "2 eggs"])
+        - instructions: list of step strings
+        - nutrition: {calories, protein, carbs, fat} as strings with units
+        Fill in reasonable values for any missing fields based on the recipe context."""
 
         prompt = f"Format this recipe:\n{json.dumps(recipe, indent=2)}"
 
         try:
+            model_id = self.models_dict[model]
             response = self.invoke_model_with_system(
                 prompt=prompt,
                 system_prompt=system_prompt,
+                model_id=model_id,
                 max_tokens=1024,
                 temperature=0.3
             )
@@ -278,34 +289,37 @@ Fill in reasonable values for any missing fields based on the recipe context."""
     def generate_recipe(
         self,
         user_input: str,
+        model: str = 'claude-sonnet-3-5'
     ) -> Optional[Dict]:
         """
         Generate a new recipe from scratch based on user request
 
         Args:
             user_input: user's food request
+            model: the Bedrock LLM
 
         Returns:
             Generated recipe in standard format
         """
         system_prompt = """You are a professional chef. Create a recipe based on the user's request.
-Return ONLY valid JSON with these fields:
-- name: string
-- description: brief 1-2 sentence description
-- prep_time: human readable (e.g. "15 minutes")
-- cook_time: human readable
-- total_time: human readable
-- servings: string (e.g. "4 servings")
-- ingredients: list of strings with quantities (e.g. ["1 cup flour", "2 eggs"])
-- instructions: list of numbered step strings
-- nutrition: {calories, protein, carbs, fat} as strings with units (estimate)
-Create a practical, delicious recipe that matches the request."""
+        Return ONLY valid JSON with these fields:
+        - name: string
+        - description: brief 1-2 sentence description
+        - prep_time: human readable (e.g. "15 minutes")
+        - cook_time: human readable
+        - total_time: human readable
+        - servings: string (e.g. "4 servings")
+        - ingredients: list of strings with quantities (e.g. ["1 cup flour", "2 eggs"])
+        - instructions: list of numbered step strings
+        - nutrition: {calories, protein, carbs, fat} as strings with units (estimate)
+        Create a practical, delicious recipe that matches the request."""
 
         try:
+            model_id = self.models_dict[model]
             response = self.invoke_model_with_system(
                 prompt=f"Create a recipe for: {user_input}",
                 system_prompt=system_prompt,
-                #model_id='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                model_id=model_id,
                 max_tokens=1024,
                 temperature=0.4
             )

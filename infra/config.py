@@ -38,7 +38,13 @@ AWS_RESOURCES = {
 
     # DynamoDB
     'dynamodb_recipes_table_name': 'ai-sous-chef-recipes',
-    'dynamodb_recipes_table_partition_key': 'recipe_id'
+    'dynamodb_recipes_table_partition_key': 'recipe_id',
+
+    # Bedrock
+    'bedrock_model_id_extract_search_params': 'claude-haiku-3', # LLM
+    'bedrock_model_id_rank_recipes': 'claude-haiku-3',
+    'bedrock_model_id_format_recipe': 'claude-haiku-3',
+    'bedrock_model_id_generate_recipe': 'claude-sonnet-3-5',
 }
 
 EC2_USER_DATA_SCRIPT = """#!/bin/bash

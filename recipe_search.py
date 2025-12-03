@@ -4,10 +4,6 @@ recipe_search.py
 Description:
     * Interactive recipe search using AI
 
-Instructions:
-    * Run via CLI:
-        python main.py search
-
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
@@ -18,7 +14,6 @@ from infra.managers.bedrock_manager import BedrockManager
 from infra.managers.dynamodb_manager import DynamoDBItemManager
 from infra.managers.s3_manager import S3ObjectManager
 from infra.config import AWS_RESOURCES
-
 
 def _print_recipe(recipe: dict) -> None:
     """Pretty print a recipe"""
@@ -58,7 +53,7 @@ def _build_filter(params: dict) -> tuple:
     """
     filter_parts = []
     expression_values = {}
-    expression_names = {'#n': 'name'} # name is a reserved word
+    expression_names = {'#n': 'name'} # "name" is a reserved word
 
     # Keywords search name, description, and keywords list
     keyword_parts = []
@@ -88,7 +83,6 @@ def _build_filter(params: dict) -> tuple:
         expression_values if expression_values else None,
         expression_names
     )
-
 
 def recipe_search() -> None:
     """Interactive recipe search"""
@@ -139,13 +133,13 @@ def recipe_search() -> None:
             
             if generate == 'y':
                 print("\nGenerating recipe...")
-                recipe = bedrock.generate_recipe(user_input)
+                recipe = bedrock.generate_recipe(user_input, AWS_RESOURCES['bedrock_model_id_generate_recipe'])
                 if recipe:
                     _print_recipe(recipe)
             continue
 
         # Rank results
-        top_recipes = bedrock.rank_recipes(user_input, results, top_n=5)
+        top_recipes = bedrock.rank_recipes(user_input, results, top_n=5, model=AWS_RESOURCES['bedrock_model_id_rank_recipes'])
 
         # Present options
         print(f"\nFound {len(results)} recipes. Top matches:\n")
@@ -162,7 +156,7 @@ def recipe_search() -> None:
         if choice == '0':
             # Generate new recipe
             print("\nGenerating recipe...")
-            recipe = bedrock.generate_recipe(user_input)
+            recipe = bedrock.generate_recipe(user_input, AWS_RESOURCES['bedrock_model_id_extract_search_params'])
             
         elif choice.isdigit() and 1 <= int(choice) <= len(top_recipes):
             # Fetch from S3 and format
@@ -172,7 +166,7 @@ def recipe_search() -> None:
             raw = s3.get_object(AWS_RESOURCES['s3_clean_bucket_name'], selected['s3_key'])
             if raw:
                 raw_recipe = json.loads(raw.decode('utf-8'))
-                recipe = bedrock.format_recipe(raw_recipe)
+                recipe = bedrock.format_recipe(raw_recipe, AWS_RESOURCES['bedrock_model_id_format_recipe'])
             else:
                 print("Failed to fetch recipe from S3.")
                 continue
