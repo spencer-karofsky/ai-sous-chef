@@ -72,7 +72,40 @@ class HomeView:
         create_desc2 = self.fonts['small'].render("recipe with AI", True, MID_GRAY)
         screen.blit(create_desc2, (create_rect.x + 30, create_rect.y + 100))
         
-        self._draw_plus_icon_large(screen, create_rect.x + card_width - 80, create_rect.y + card_height - 70, WHITE)
+        # Sparkles icon instead of plus
+        self._draw_sparkles_icon_large(screen, create_rect.x + card_width - 90, create_rect.y + card_height - 80, WHITE)
+
+    def _draw_search_icon_large(self, screen, x, y):
+        color = CHARCOAL
+        pygame.draw.circle(screen, color, (x + 20, y + 20), 18, 3)
+        pygame.draw.line(screen, color, (x + 33, y + 33), (x + 48, y + 48), 4)
+
+    def _draw_sparkles_icon_large(self, screen, x, y, color):
+        """Draw AI sparkles icon - matches nav bar icon."""
+        import math
+        size = 50
+        
+        # Large sparkle - center/bottom-left
+        self._draw_sparkle(screen, x + size * 0.4, y + size * 0.55, size * 0.45, color)
+        
+        # Smaller sparkle - top-right
+        self._draw_sparkle(screen, x + size * 0.75, y + size * 0.22, size * 0.25, color)
+
+    def _draw_sparkle(self, screen, cx, cy, size, color):
+        """Draw a 4-pointed star sparkle."""
+        points = [
+            (cx, cy - size),
+            (cx + size * 0.2, cy - size * 0.2),
+            (cx + size, cy),
+            (cx + size * 0.2, cy + size * 0.2),
+            (cx, cy + size),
+            (cx - size * 0.2, cy + size * 0.2),
+            (cx - size, cy),
+            (cx - size * 0.2, cy - size * 0.2),
+        ]
+        
+        points = [(int(px), int(py)) for px, py in points]
+        pygame.draw.polygon(screen, color, points)
     
     def _draw_search_icon_large(self, screen, x, y):
         color = CHARCOAL

@@ -21,7 +21,7 @@ from ui_new.constants import *
 from ui_new.components import NavBar, TouchKeyboard
 from ui_new.views import (
     HomeView, SearchView, CreateView, 
-    RecipeView, FavoritesView, SettingsView
+    RecipeView, FavoritesView, SettingsView, WiFiView
 )
 from ui_new.favorites_manager import FavoritesManager
 
@@ -67,6 +67,7 @@ class RecipeApp:
             'Favorites': FavoritesView(self.fonts),
             'Settings': SettingsView(self.fonts),
             'Recipe': RecipeView(self.fonts),
+            'WiFi': WiFiView(self.fonts),
         }
 
         # State
@@ -352,6 +353,19 @@ class RecipeApp:
         elif action.startswith('view_'):
             fav_id = action.replace('view_', '')
             self._view_favorite(fav_id)
+
+        # Settings actions
+        elif action == 'action_wifi':
+            self.previous_view = 'Settings'
+            self.current_view = 'WiFi'
+        
+        # WiFi actions
+        elif action == 'back' and self.current_view == 'WiFi':
+            self.current_view = 'Settings'
+            self.navbar.active = 'Settings'
+        elif action == 'focus_password':
+            self.active_input = 'wifi_password'
+            self.keyboard.visible = True
     
     def _toggle_favorite(self):
         """Toggle favorite status for current recipe."""
