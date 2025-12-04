@@ -502,7 +502,7 @@ class RecipeApp:
 
                 elif event.type == pygame.MOUSEMOTION:
                     if self.touch_start_y is not None:
-                        # Check for slider drag first
+                        # Check for slider drag first (Settings)
                         if self.current_view == 'Settings' and self.views['Settings'].dragging_slider:
                             self.views['Settings'].handle_drag(event.pos[0], event.pos[1])
                             self.is_dragging = True
@@ -518,6 +518,14 @@ class RecipeApp:
                                     settings = self.views['Settings']
                                     new_scroll = self.touch_start_scroll + delta
                                     settings.scroll_offset = max(0, min(settings.max_scroll, new_scroll))
+                                elif self.current_view == 'Favorites':
+                                    favorites = self.views['Favorites']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    favorites.scroll_offset = max(0, min(favorites.max_scroll, new_scroll))
+                                elif self.current_view == 'WiFi':
+                                    wifi = self.views['WiFi']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    wifi.scroll_offset = max(0, min(wifi.max_scroll, new_scroll))
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
