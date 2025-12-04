@@ -222,6 +222,8 @@ class RecipeApp:
         # Touch scrolling
         self.touch_start_y = None
         self.touch_start_scroll = 0
+        self.is_dragging = False
+        self.drag_threshold = 10  # pixels before considered a drag vs tap
         
     def _build_filter(self, params: dict) -> tuple:
         filter_parts = []
@@ -718,31 +720,54 @@ class RecipeApp:
                     
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
-                        self.handle_touch(event.pos)
+                        # Start tracking for potential scroll
+                        self.touch_start_y = event.pos[1]
+                        self.touch_start_scroll = self.scroll_offset
+                        self.is_dragging = False
                     elif event.button == 4:  # Scroll up
                         self.scroll_offset = max(0, self.scroll_offset - 40)
                     elif event.button == 5:  # Scroll down
                         if self.view == "recipe":
                             self.scroll_offset = min(self.max_scroll, self.scroll_offset + 40)
                 
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.touch_start_y is not None and self.view == "recipe":
+                        delta = self.touch_start_y - event.pos[1]
+                        if abs(delta) > self.drag_threshold:
+                            self.is_dragging = True
+                            new_scroll = self.touch_start_scroll + delta
+                            self.scroll_offset = max(0, min(self.max_scroll, new_scroll))
+                
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        if not self.is_dragging:
+                            self.handle_touch(event.pos)
+                        self.touch_start_y = None
+                        self.is_dragging = False
+                
                 elif event.type == pygame.FINGERDOWN:
                     touch_x = int(event.x * WIDTH)
                     touch_y = int(event.y * HEIGHT)
-                    # Start tracking for scroll
-                    if self.view == "recipe":
-                        self.touch_start_y = touch_y
-                        self.touch_start_scroll = self.scroll_offset
-                    self.handle_touch((touch_x, touch_y))
+                    self.touch_start_y = touch_y
+                    self.touch_start_scroll = self.scroll_offset
+                    self.is_dragging = False
                 
                 elif event.type == pygame.FINGERMOTION:
-                    if self.view == "recipe" and self.touch_start_y is not None:
+                    if self.touch_start_y is not None and self.view == "recipe":
                         touch_y = int(event.y * HEIGHT)
                         delta = self.touch_start_y - touch_y
-                        new_scroll = self.touch_start_scroll + delta
-                        self.scroll_offset = max(0, min(self.max_scroll, new_scroll))
+                        if abs(delta) > self.drag_threshold:
+                            self.is_dragging = True
+                            new_scroll = self.touch_start_scroll + delta
+                            self.scroll_offset = max(0, min(self.max_scroll, new_scroll))
                 
                 elif event.type == pygame.FINGERUP:
+                    touch_x = int(event.x * WIDTH)
+                    touch_y = int(event.y * HEIGHT)
+                    if not self.is_dragging:
+                        self.handle_touch((touch_x, touch_y))
                     self.touch_start_y = None
+                    self.is_dragging = False
                     
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
