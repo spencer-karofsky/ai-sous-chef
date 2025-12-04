@@ -185,7 +185,7 @@ class TouchKeyboard:
 class RecipeApp:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         pygame.display.set_caption("AI Sous Chef")
         self.clock = pygame.time.Clock()
         
