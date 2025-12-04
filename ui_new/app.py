@@ -21,7 +21,8 @@ from ui_new.constants import *
 from ui_new.components import NavBar, TouchKeyboard
 from ui_new.views import (
     HomeView, SearchView, CreateView, 
-    RecipeView, FavoritesView, SettingsView, WiFiView, PreferencesView
+    RecipeView, FavoritesView, SettingsView, WiFiView, PreferencesView,
+    SkillLevelView
 )
 from ui_new.config import Config
 from ui_new.favorites_manager import FavoritesManager
@@ -51,6 +52,9 @@ class RecipeApp:
             'caption': pygame.font.SysFont(font_name, FONT_CAPTION),
         }
 
+        # Config - initialize early since views depend on it
+        self.config = Config()
+
         # AWS clients
         self.prompter = RecipePrompter(boto3.client('bedrock-runtime', region_name='us-east-1'))
         self.dynamodb = DynamoDBItemManager(boto3.client('dynamodb', region_name='us-east-1'))
@@ -60,16 +64,25 @@ class RecipeApp:
         self.navbar = NavBar(self.screen, self.fonts['caption'])
         self.keyboard = TouchKeyboard(self.screen, self.fonts['body'])
 
+        # Favorites manager
+        self.favorites_manager = FavoritesManager()
+
         # Views
         self.views = {
             'Home': HomeView(self.fonts),
             'Search': SearchView(self.fonts),
             'Create': CreateView(self.fonts),
             'Favorites': FavoritesView(self.fonts),
-            'Settings': SettingsView(self.fonts),
+            'Settings': SettingsView(self.fonts, self.config),
             'Recipe': RecipeView(self.fonts),
             'WiFi': WiFiView(self.fonts),
+            'Preferences': PreferencesView(self.fonts, self.config),
+            'SkillLevel': SkillLevelView(self.fonts, self.config),
         }
+
+        # Pass manager to views that need it
+        self.views['Recipe'].set_manager(self.favorites_manager)
+        self.views['Favorites'].set_manager(self.favorites_manager)
 
         # State
         self.current_view = 'Home'
@@ -91,34 +104,11 @@ class RecipeApp:
         self.touch_start_scroll = 0
         self.is_dragging = False
         self.drag_threshold = 10
-
         self.touch_start_x = None
-
-        # Favorites manager
-        self.favorites_manager = FavoritesManager()
-
-        # Pass manager to views that need it
-        self.views['Recipe'].set_manager(self.favorites_manager)
-        self.views['Favorites'].set_manager(self.favorites_manager)
 
         # Track current recipe source for favorites
         self.current_recipe_source = 'search'
         self.current_recipe_s3_key = None
-
-        # Config
-        self.config = Config()
-
-        # Views
-        self.views = {
-            'Home': HomeView(self.fonts),
-            'Search': SearchView(self.fonts),
-            'Create': CreateView(self.fonts),
-            'Favorites': FavoritesView(self.fonts),
-            'Settings': SettingsView(self.fonts),
-            'Recipe': RecipeView(self.fonts),
-            'WiFi': WiFiView(self.fonts),
-            'Preferences': PreferencesView(self.fonts, self.config),
-        }
 
     def _get_state(self):
         return {
@@ -235,7 +225,6 @@ class RecipeApp:
                         self.current_view = 'Recipe'
                         self.scroll_offset = 0
                         self.status = ""
-                        # Track for favorites
                         self.current_recipe_source = 'search'
                         self.current_recipe_s3_key = selected['s3_key']
             except Exception:
@@ -262,7 +251,6 @@ class RecipeApp:
                     self.scroll_offset = 0
                     self.create_status = ""
                     self.create_text = ""
-                    # Track for favorites
                     self.current_recipe_source = 'generated'
                     self.current_recipe_s3_key = None
             except Exception:
@@ -348,6 +336,10 @@ class RecipeApp:
                 self.previous_view = self.current_view
                 self.current_view = 'Preferences'
                 return
+            elif view_name == 'skill':
+                self.previous_view = self.current_view
+                self.current_view = 'SkillLevel'
+                return
             
             view_name = view_name.capitalize()
             if view_name in self.views:
@@ -398,7 +390,11 @@ class RecipeApp:
                 self.current_view = 'Settings'
                 self.navbar.active = 'Settings'
                 self.keyboard.visible = False
-                # Refresh settings view to show updated subtitle
+                self.views['Settings']._build_sections()
+            elif self.current_view == 'SkillLevel':
+                self.current_view = 'Settings'
+                self.navbar.active = 'Settings'
+                self.keyboard.visible = False
                 self.views['Settings']._build_sections()
             else:
                 self.current_view = self.previous_view or 'Search'
@@ -419,7 +415,6 @@ class RecipeApp:
             self._view_favorite(fav_id)
     
     def _toggle_favorite(self):
-        """Toggle favorite status for current recipe."""
         recipe = self.prompter.current_recipe
         if not recipe:
             return
@@ -436,7 +431,6 @@ class RecipeApp:
             )
 
     def _view_favorite(self, favorite_id):
-        """Load and view a favorited recipe."""
         favorite = self.favorites_manager.get_by_id(favorite_id)
         if not favorite:
             return
@@ -446,12 +440,10 @@ class RecipeApp:
         def do_load():
             try:
                 if favorite.get('recipe_data'):
-                    # Generated recipe - data is stored
                     self.prompter.current_recipe = favorite['recipe_data']
                     self.current_recipe_source = 'generated'
                     self.current_recipe_s3_key = None
                 elif favorite.get('s3_key'):
-                    # Searched recipe - fetch from S3
                     raw = self.s3.get_object(AWS_RESOURCES['s3_clean_bucket_name'], favorite['s3_key'])
                     if raw:
                         raw_recipe = json.loads(raw.decode('utf-8'))
@@ -467,18 +459,15 @@ class RecipeApp:
             finally:
                 self.loading = False
         
-        import threading
         threading.Thread(target=do_load, daemon=True).start()
 
     def handle_touch(self, pos):
-        # Keyboard first
         if self.keyboard.visible:
             key = self.keyboard.handle_touch(pos)
             if key:
                 self.handle_keyboard_input(key)
                 return
 
-        # Navbar
         nav_action = self.navbar.handle_touch(pos)
         if nav_action:
             if nav_action != self.current_view and self.current_view != 'Recipe':
@@ -487,7 +476,6 @@ class RecipeApp:
                 self.keyboard.visible = False
                 self.scroll_offset = 0
             elif self.current_view == 'Recipe':
-                # From recipe, go back to nav item
                 self.current_view = nav_action
                 self.navbar.active = nav_action
                 self.keyboard.visible = False
@@ -495,7 +483,6 @@ class RecipeApp:
                 self.prompter.clear_conversation()
             return
 
-        # Current view
         state = self._get_state()
         view = self.views.get(self.current_view)
         if view:
@@ -507,13 +494,11 @@ class RecipeApp:
         overlay.fill((255, 255, 255, 220))
         self.screen.blit(overlay, (0, 0))
 
-        # Simple spinner
         ticks = pygame.time.get_ticks()
         cx, cy = WIDTH // 2, HEIGHT // 2
         
         for i in range(8):
             angle = i * 45 + ticks / 5
-            alpha = 255 - i * 25
             x = cx + int(30 * pygame.math.Vector2(1, 0).rotate(angle).x)
             y = cy + int(30 * pygame.math.Vector2(1, 0).rotate(angle).y)
             color = (SOFT_BLACK[0], SOFT_BLACK[1], SOFT_BLACK[2])
@@ -536,7 +521,6 @@ class RecipeApp:
                         self.touch_start_x = event.pos[0]
                         self.is_dragging = False
                         
-                        # Track scroll offset for current view
                         if self.current_view == 'Settings':
                             self.touch_start_scroll = self.views['Settings'].scroll_offset
                             self._check_slider_start(event.pos)
@@ -551,19 +535,17 @@ class RecipeApp:
                         else:
                             self.touch_start_scroll = 0
                             
-                    elif event.button == 4:  # Scroll up
+                    elif event.button == 4:
                         self._handle_scroll(-40)
-                    elif event.button == 5:  # Scroll down
+                    elif event.button == 5:
                         self._handle_scroll(40)
 
                 elif event.type == pygame.MOUSEMOTION:
                     if self.touch_start_y is not None:
-                        # Check for slider drag first (Settings)
                         if self.current_view == 'Settings' and self.views['Settings'].dragging_slider:
                             self.views['Settings'].handle_drag(event.pos[0], event.pos[1])
                             self.is_dragging = True
                         else:
-                            # Handle scroll drag
                             delta = self.touch_start_y - event.pos[1]
                             if abs(delta) > self.drag_threshold:
                                 self.is_dragging = True
@@ -589,7 +571,6 @@ class RecipeApp:
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
-                        # End slider drag
                         if self.current_view == 'Settings':
                             self.views['Settings'].handle_drag_end()
                         
@@ -682,7 +663,7 @@ class RecipeApp:
                     new_max = view.draw(self.screen, state, self.keyboard.visible)
                     if new_max is not None:
                         self.max_scroll = new_max
-                elif self.current_view in ('Search', 'Create', 'Settings', 'WiFi', 'Preferences'):
+                elif self.current_view in ('Search', 'Create', 'Settings', 'WiFi', 'Preferences', 'SkillLevel'):
                     view.draw(self.screen, state, self.keyboard.visible)
                 else:
                     view.draw(self.screen, state)
@@ -700,9 +681,7 @@ class RecipeApp:
 
         pygame.quit()
 
-
     def _handle_scroll(self, delta):
-        """Handle scroll wheel events."""
         if self.current_view == 'Settings':
             self.views['Settings'].handle_scroll(delta)
         elif self.current_view == 'Favorites':
@@ -714,23 +693,19 @@ class RecipeApp:
         elif self.current_view == 'Recipe':
             self.scroll_offset = max(0, min(self.max_scroll, self.scroll_offset + delta))
 
-
     def _check_slider_start(self, pos):
-        """Check if touch started on a slider."""
         settings = self.views['Settings']
         x, y = pos
         content_y = y - 80 + settings.scroll_offset
         
-        # Find brightness slider
         item_y = 10
         for section in settings.sections:
-            item_y += 35 + 5  # Section title + padding
+            item_y += 35 + 5
             
             for item in section['items']:
                 if item['type'] == 'slider':
-                    # Check if tap is in slider area
                     slider_x = WIDTH - 80 - 150 + 20
-                    slider_y = item_y + 8  # Approximate slider y position
+                    slider_y = item_y + 8
                     
                     if (slider_x - 20 <= x <= slider_x + 170 and 
                         item_y <= content_y <= item_y + 60):

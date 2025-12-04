@@ -9,6 +9,7 @@ from ui_new.views.favorites_view import FavoritesView
 from ui_new.views.settings_view import SettingsView
 from ui_new.views.wifi_view import WiFiView
 from ui_new.views.preferences_view import PreferencesView
+from ui_new.views.skill_level_view import SkillLevelView
 
 __all__ = [
     'HomeView',
@@ -19,4 +20,5 @@ __all__ = [
     'SettingsView',
     'WiFiView',
     'PreferencesView',
+    'SkillLevelView'
 ]

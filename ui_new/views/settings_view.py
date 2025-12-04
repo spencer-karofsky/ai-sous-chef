@@ -11,21 +11,20 @@ import pygame
 import os
 import sys
 from ui_new.constants import *
-from ui_new.config import Config
 
 
 class SettingsView:
-    def __init__(self, fonts):
+    def __init__(self, fonts, config):
         self.fonts = fonts
+        self.config = config  # Use passed-in config instead of creating new one
         self.scroll_offset = 0
         self.max_scroll = 0
-        self.config = Config()
         
         # Active slider dragging
         self.dragging_slider = None
         
         # Modal state
-        self.modal = None  # None, 'system_info', 'network_status', 'confirm_reset', etc.
+        self.modal = None
         self.modal_data = None
         
         self._build_sections()
@@ -74,7 +73,6 @@ class SettingsView:
         self._draw_header(screen)
         self.max_scroll = self._draw_content(screen, content_bottom)
         
-        # Draw modal if active
         if self.modal:
             self._draw_modal(screen)
     
@@ -181,18 +179,14 @@ class SettingsView:
             slider_y = y + 23
             value = item.get('value', 50)
             
-            # Store slider rect for hit detection
             item['_slider_rect'] = (slider_x, slider_y - 15, slider_width, 30)
             
-            # Track
             pygame.draw.rect(surface, DIVIDER, (slider_x, slider_y, slider_width, 6), border_radius=3)
             
-            # Filled portion
             fill_width = int(slider_width * value / 100)
             if fill_width > 0:
                 pygame.draw.rect(surface, SOFT_BLACK, (slider_x, slider_y, fill_width, 6), border_radius=3)
             
-            # Knob
             knob_x = slider_x + fill_width
             pygame.draw.circle(surface, SOFT_BLACK, (knob_x, slider_y + 3), 10)
             pygame.draw.circle(surface, WHITE, (knob_x, slider_y + 3), 6)
@@ -203,12 +197,10 @@ class SettingsView:
         return y + 70
     
     def _draw_modal(self, screen):
-        # Overlay
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
         
-        # Modal box
         modal_width = 500
         modal_height = 350
         modal_x = (WIDTH - modal_width) // 2
@@ -228,11 +220,9 @@ class SettingsView:
                                      "Clear Cache", "This will delete all cached data. Continue?")
     
     def _draw_system_info_modal(self, screen, x, y, w, h):
-        # Title
         title = self.fonts['header'].render("System Info", True, SOFT_BLACK)
         screen.blit(title, (x + 30, y + 25))
         
-        # Info
         info = self.config.get_system_info()
         info_y = y + 80
         for key, value in info.items():
@@ -242,7 +232,6 @@ class SettingsView:
             screen.blit(val_text, (x + 180, info_y))
             info_y += 40
         
-        # Close button
         self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", SOFT_BLACK)
     
     def _draw_network_modal(self, screen, x, y, w, h):
@@ -252,7 +241,6 @@ class SettingsView:
         status = self.config.get_network_status()
         info_y = y + 80
         
-        # Connection status with color
         status_text = "Connected" if status['connected'] else "Disconnected"
         status_color = (60, 160, 60) if status['connected'] else (200, 60, 60)
         
@@ -280,7 +268,6 @@ class SettingsView:
         title = self.fonts['header'].render(title_text, True, SOFT_BLACK)
         screen.blit(title, (x + 30, y + 25))
         
-        # Message - word wrap
         words = message.split()
         lines = []
         current = ""
@@ -300,7 +287,6 @@ class SettingsView:
             screen.blit(text, (x + 30, msg_y))
             msg_y += 35
         
-        # Buttons
         self._draw_modal_button(screen, x + 30, y + h - 60, 100, 40, "Cancel", LIGHT_GRAY, SOFT_BLACK)
         self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Confirm", (200, 60, 60), WHITE)
     
@@ -314,14 +300,11 @@ class SettingsView:
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos
         
-        # Handle modal touches first
         if self.modal:
             return self._handle_modal_touch(x, y)
         
-        # Adjust y for scroll
         content_y = y - 80 + self.scroll_offset
         
-        # Find which item was tapped
         item_y = 10
         for section in self.sections:
             item_y += 35
@@ -345,18 +328,15 @@ class SettingsView:
         btn_y = modal_y + modal_height - 60
         
         if self.modal in ('system_info', 'network_status'):
-            # Close button
             if modal_x + modal_width - 130 <= x <= modal_x + modal_width - 30 and btn_y <= y <= btn_y + 40:
                 self.modal = None
                 return 'modal_closed'
         
         elif self.modal in ('confirm_reset', 'confirm_clear'):
-            # Cancel button
             if modal_x + 30 <= x <= modal_x + 130 and btn_y <= y <= btn_y + 40:
                 self.modal = None
                 return 'modal_cancelled'
             
-            # Confirm button
             if modal_x + modal_width - 130 <= x <= modal_x + modal_width - 30 and btn_y <= y <= btn_y + 40:
                 if self.modal == 'confirm_reset':
                     self.config.factory_reset()
@@ -366,7 +346,6 @@ class SettingsView:
                 self.modal = None
                 return 'modal_confirmed'
         
-        # Click outside modal to close
         if not (modal_x <= x <= modal_x + modal_width and modal_y <= y <= modal_y + modal_height):
             self.modal = None
             return 'modal_closed'
@@ -379,7 +358,6 @@ class SettingsView:
             options = item.get('options', ['Off', 'On'])
             item['value'] = (current + 1) % len(options)
             
-            # Save to config
             if item['id'] == 'units':
                 self.config.set('units', options[item['value']])
             
@@ -401,6 +379,8 @@ class SettingsView:
                 return 'navigate_dietary'
             elif item['id'] == 'exclusions':
                 return 'navigate_exclusions'
+            elif item['id'] == 'skill':
+                return 'navigate_skill'
             elif item['id'] == 'system_info':
                 self.modal = 'system_info'
             elif item['id'] == 'network_status':
@@ -414,29 +394,23 @@ class SettingsView:
         return None
     
     def handle_drag(self, x, y):
-        """Handle slider dragging."""
         if not self.dragging_slider:
             return
         
         item = self.dragging_slider
         
-        # Calculate slider position
         slider_width = 150
         slider_x = WIDTH - 80 - slider_width + 20
         
-        # Calculate new value from x position
         relative_x = x - slider_x
         new_value = max(0, min(100, int(relative_x / slider_width * 100)))
         
-        # Update item value
         item['value'] = new_value
         
-        # Apply brightness immediately
         if item['id'] == 'brightness':
             self.config.set_brightness(new_value)
     
     def handle_drag_end(self):
-        """End slider dragging."""
         self.dragging_slider = None
     
     def handle_scroll(self, delta):
