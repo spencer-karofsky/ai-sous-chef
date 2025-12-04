@@ -21,8 +21,9 @@ from ui_new.constants import *
 from ui_new.components import NavBar, TouchKeyboard
 from ui_new.views import (
     HomeView, SearchView, CreateView, 
-    RecipeView, FavoritesView, SettingsView, WiFiView
+    RecipeView, FavoritesView, SettingsView, WiFiView, PreferencesView
 )
+from ui_new.config import Config
 from ui_new.favorites_manager import FavoritesManager
 
 
@@ -103,6 +104,21 @@ class RecipeApp:
         # Track current recipe source for favorites
         self.current_recipe_source = 'search'
         self.current_recipe_s3_key = None
+
+        # Config
+        self.config = Config()
+
+        # Views
+        self.views = {
+            'Home': HomeView(self.fonts),
+            'Search': SearchView(self.fonts),
+            'Create': CreateView(self.fonts),
+            'Favorites': FavoritesView(self.fonts),
+            'Settings': SettingsView(self.fonts),
+            'Recipe': RecipeView(self.fonts),
+            'WiFi': WiFiView(self.fonts),
+            'Preferences': PreferencesView(self.fonts, self.config),
+        }
 
     def _get_state(self):
         return {
@@ -282,7 +298,12 @@ class RecipeApp:
 
     def handle_keyboard_input(self, key):
         if key == 'BACKSPACE':
-            self._set_active_text(self._get_active_text()[:-1])
+            if self.active_input == 'wifi_password':
+                self.views['WiFi'].handle_keyboard_input(key)
+            elif self.active_input == 'custom_preference':
+                self.views['Preferences'].handle_keyboard_input(key)
+            else:
+                self._set_active_text(self._get_active_text()[:-1])
         elif key == 'GO':
             self.keyboard.visible = False
             if self.active_input == 'search':
@@ -291,10 +312,19 @@ class RecipeApp:
                 self.generate_recipe()
             elif self.active_input == 'modify':
                 self.modify_recipe()
+            elif self.active_input == 'wifi_password':
+                self.views['WiFi'].handle_keyboard_input(key)
+            elif self.active_input == 'custom_preference':
+                self.views['Preferences'].handle_keyboard_input(key)
         elif key == 'HIDE':
             self.keyboard.visible = False
         else:
-            self._set_active_text(self._get_active_text() + key)
+            if self.active_input == 'wifi_password':
+                self.views['WiFi'].handle_keyboard_input(key)
+            elif self.active_input == 'custom_preference':
+                self.views['Preferences'].handle_keyboard_input(key)
+            else:
+                self._set_active_text(self._get_active_text() + key)
 
     def handle_view_action(self, action):
         if not action:
@@ -302,7 +332,24 @@ class RecipeApp:
 
         # Navigation actions
         if action.startswith('navigate_'):
-            view_name = action.replace('navigate_', '').capitalize()
+            view_name = action.replace('navigate_', '')
+            
+            if view_name == 'wifi':
+                self.previous_view = self.current_view
+                self.current_view = 'WiFi'
+                return
+            elif view_name == 'dietary':
+                self.views['Preferences'].set_mode('dietary')
+                self.previous_view = self.current_view
+                self.current_view = 'Preferences'
+                return
+            elif view_name == 'exclusions':
+                self.views['Preferences'].set_mode('exclusions')
+                self.previous_view = self.current_view
+                self.current_view = 'Preferences'
+                return
+            
+            view_name = view_name.capitalize()
             if view_name in self.views:
                 self.current_view = view_name
                 self.navbar.active = view_name
@@ -318,6 +365,12 @@ class RecipeApp:
             self.keyboard.visible = True
         elif action == 'focus_modify':
             self.active_input = 'modify'
+            self.keyboard.visible = True
+        elif action == 'focus_password':
+            self.active_input = 'wifi_password'
+            self.keyboard.visible = True
+        elif action == 'focus_custom':
+            self.active_input = 'custom_preference'
             self.keyboard.visible = True
         
         # Search actions
@@ -337,13 +390,24 @@ class RecipeApp:
         
         # Recipe actions
         elif action == 'back':
-            self.current_view = self.previous_view or 'Search'
-            self.navbar.active = self.current_view
-            self.scroll_offset = 0
-            self.modify_text = ""
-            self.modify_status = ""
-            self.keyboard.visible = False
-            self.prompter.clear_conversation()
+            if self.current_view == 'WiFi':
+                self.current_view = 'Settings'
+                self.navbar.active = 'Settings'
+                self.keyboard.visible = False
+            elif self.current_view == 'Preferences':
+                self.current_view = 'Settings'
+                self.navbar.active = 'Settings'
+                self.keyboard.visible = False
+                # Refresh settings view to show updated subtitle
+                self.views['Settings']._build_sections()
+            else:
+                self.current_view = self.previous_view or 'Search'
+                self.navbar.active = self.current_view
+                self.scroll_offset = 0
+                self.modify_text = ""
+                self.modify_status = ""
+                self.keyboard.visible = False
+                self.prompter.clear_conversation()
         elif action == 'modify':
             self.modify_recipe()
         
@@ -353,19 +417,6 @@ class RecipeApp:
         elif action.startswith('view_'):
             fav_id = action.replace('view_', '')
             self._view_favorite(fav_id)
-
-        # Settings actions
-        elif action == 'action_wifi':
-            self.previous_view = 'Settings'
-            self.current_view = 'WiFi'
-        
-        # WiFi actions
-        elif action == 'back' and self.current_view == 'WiFi':
-            self.current_view = 'Settings'
-            self.navbar.active = 'Settings'
-        elif action == 'focus_password':
-            self.active_input = 'wifi_password'
-            self.keyboard.visible = True
     
     def _toggle_favorite(self):
         """Toggle favorite status for current recipe."""
@@ -488,10 +539,15 @@ class RecipeApp:
                         # Track scroll offset for current view
                         if self.current_view == 'Settings':
                             self.touch_start_scroll = self.views['Settings'].scroll_offset
-                            # Check if touching slider
                             self._check_slider_start(event.pos)
                         elif self.current_view == 'Recipe':
                             self.touch_start_scroll = self.scroll_offset
+                        elif self.current_view == 'Favorites':
+                            self.touch_start_scroll = self.views['Favorites'].scroll_offset
+                        elif self.current_view == 'WiFi':
+                            self.touch_start_scroll = self.views['WiFi'].scroll_offset
+                        elif self.current_view == 'Preferences':
+                            self.touch_start_scroll = self.views['Preferences'].scroll_offset
                         else:
                             self.touch_start_scroll = 0
                             
@@ -526,6 +582,10 @@ class RecipeApp:
                                     wifi = self.views['WiFi']
                                     new_scroll = self.touch_start_scroll + delta
                                     wifi.scroll_offset = max(0, min(wifi.max_scroll, new_scroll))
+                                elif self.current_view == 'Preferences':
+                                    prefs = self.views['Preferences']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    prefs.scroll_offset = max(0, min(prefs.max_scroll, new_scroll))
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -552,6 +612,12 @@ class RecipeApp:
                         self._check_slider_start((touch_x, touch_y))
                     elif self.current_view == 'Recipe':
                         self.touch_start_scroll = self.scroll_offset
+                    elif self.current_view == 'Favorites':
+                        self.touch_start_scroll = self.views['Favorites'].scroll_offset
+                    elif self.current_view == 'WiFi':
+                        self.touch_start_scroll = self.views['WiFi'].scroll_offset
+                    elif self.current_view == 'Preferences':
+                        self.touch_start_scroll = self.views['Preferences'].scroll_offset
                     else:
                         self.touch_start_scroll = 0
 
@@ -574,6 +640,18 @@ class RecipeApp:
                                     settings = self.views['Settings']
                                     new_scroll = self.touch_start_scroll + delta
                                     settings.scroll_offset = max(0, min(settings.max_scroll, new_scroll))
+                                elif self.current_view == 'Favorites':
+                                    favorites = self.views['Favorites']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    favorites.scroll_offset = max(0, min(favorites.max_scroll, new_scroll))
+                                elif self.current_view == 'WiFi':
+                                    wifi = self.views['WiFi']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    wifi.scroll_offset = max(0, min(wifi.max_scroll, new_scroll))
+                                elif self.current_view == 'Preferences':
+                                    prefs = self.views['Preferences']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    prefs.scroll_offset = max(0, min(prefs.max_scroll, new_scroll))
 
                 elif event.type == pygame.FINGERUP:
                     touch_x = int(event.x * WIDTH)
@@ -604,7 +682,7 @@ class RecipeApp:
                     new_max = view.draw(self.screen, state, self.keyboard.visible)
                     if new_max is not None:
                         self.max_scroll = new_max
-                elif self.current_view in ('Search', 'Create', 'Settings'):
+                elif self.current_view in ('Search', 'Create', 'Settings', 'WiFi', 'Preferences'):
                     view.draw(self.screen, state, self.keyboard.visible)
                 else:
                     view.draw(self.screen, state)
@@ -629,6 +707,10 @@ class RecipeApp:
             self.views['Settings'].handle_scroll(delta)
         elif self.current_view == 'Favorites':
             self.views['Favorites'].handle_scroll(delta)
+        elif self.current_view == 'WiFi':
+            self.views['WiFi'].handle_scroll(delta)
+        elif self.current_view == 'Preferences':
+            self.views['Preferences'].handle_scroll(delta)
         elif self.current_view == 'Recipe':
             self.scroll_offset = max(0, min(self.max_scroll, self.scroll_offset + delta))
 

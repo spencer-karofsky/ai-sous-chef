@@ -386,7 +386,6 @@ class SettingsView:
             return f"toggle_{item['id']}"
         
         elif item['type'] == 'slider':
-            # Start dragging
             self.dragging_slider = item
             return f"slider_{item['id']}"
         
@@ -396,14 +395,19 @@ class SettingsView:
             return f"danger_{item['id']}"
         
         elif item['type'] == 'action':
-            if item['id'] == 'system_info':
+            if item['id'] == 'wifi':
+                return 'navigate_wifi'
+            elif item['id'] == 'dietary':
+                return 'navigate_dietary'
+            elif item['id'] == 'exclusions':
+                return 'navigate_exclusions'
+            elif item['id'] == 'system_info':
                 self.modal = 'system_info'
             elif item['id'] == 'network_status':
                 self.modal = 'network_status'
             elif item['id'] == 'clear_cache':
                 self.modal = 'confirm_clear'
             elif item['id'] == 'restart':
-                # Restart the app
                 os.execv(sys.executable, ['python'] + sys.argv)
             return f"action_{item['id']}"
         
