@@ -219,6 +219,10 @@ class RecipeApp:
         self.modify_status = ""
         self.max_scroll = 0
         
+        # Touch scrolling
+        self.touch_start_y = None
+        self.touch_start_scroll = 0
+        
     def _build_filter(self, params: dict) -> tuple:
         filter_parts = []
         expression_values = {}
@@ -724,7 +728,21 @@ class RecipeApp:
                 elif event.type == pygame.FINGERDOWN:
                     touch_x = int(event.x * WIDTH)
                     touch_y = int(event.y * HEIGHT)
+                    # Start tracking for scroll
+                    if self.view == "recipe":
+                        self.touch_start_y = touch_y
+                        self.touch_start_scroll = self.scroll_offset
                     self.handle_touch((touch_x, touch_y))
+                
+                elif event.type == pygame.FINGERMOTION:
+                    if self.view == "recipe" and self.touch_start_y is not None:
+                        touch_y = int(event.y * HEIGHT)
+                        delta = self.touch_start_y - touch_y
+                        new_scroll = self.touch_start_scroll + delta
+                        self.scroll_offset = max(0, min(self.max_scroll, new_scroll))
+                
+                elif event.type == pygame.FINGERUP:
+                    self.touch_start_y = None
                     
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
