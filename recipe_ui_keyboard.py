@@ -3,7 +3,7 @@ recipe_ui_keyboard.py
 
 Description:
     * Pygame UI for AI Sous Chef with on-screen touch keyboard
-    * Designed for Raspberry Pi 7" touchscreen (800x480)
+    * Designed for Raspberry Pi 7" touchscreen (1280x720)
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
@@ -32,20 +32,20 @@ GRAY = (180, 180, 180)
 RED_SOFT = (198, 86, 86)
 ACCENT = (100, 149, 237)  # Cornflower blue accent
 
-# Screen dimensions for 7" RPi display
+# Screen dimensions for 7" RPi display (rotated)
 WIDTH, HEIGHT = 1280, 720
 
-# Keyboard layout
+# Keyboard layout - scaled up
 KEYBOARD_ROWS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'],
 ]
-KEYBOARD_HEIGHT = 200
-KEY_WIDTH = 68
-KEY_HEIGHT = 34
-KEY_MARGIN = 4
+KEYBOARD_HEIGHT = 300
+KEY_WIDTH = 110
+KEY_HEIGHT = 55
+KEY_MARGIN = 6
 
 
 class TouchKeyboard:
@@ -65,9 +65,9 @@ class TouchKeyboard:
             
         # Keyboard background
         pygame.draw.rect(self.screen, BLUE_DARK, (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT))
-        pygame.draw.rect(self.screen, ACCENT, (0, self.y_offset, WIDTH, 2))
+        pygame.draw.rect(self.screen, ACCENT, (0, self.y_offset, WIDTH, 3))
         
-        y = self.y_offset + 8
+        y = self.y_offset + 12
         current_time = pygame.time.get_ticks()
         
         for row_idx, row in enumerate(KEYBOARD_ROWS):
@@ -85,8 +85,8 @@ class TouchKeyboard:
                 # Key background
                 key_rect = pygame.Rect(x, y, KEY_WIDTH, KEY_HEIGHT)
                 key_color = ACCENT if is_pressed else BLUE_MID
-                pygame.draw.rect(self.screen, key_color, key_rect, border_radius=4)
-                pygame.draw.rect(self.screen, BLUE_LIGHT, key_rect, 1, border_radius=4)
+                pygame.draw.rect(self.screen, key_color, key_rect, border_radius=6)
+                pygame.draw.rect(self.screen, BLUE_LIGHT, key_rect, 2, border_radius=6)
                 
                 # Key label
                 label = self.font.render(display_key, True, CREAM)
@@ -100,7 +100,7 @@ class TouchKeyboard:
         
         # Special keys row
         special_y = y
-        special_keys = [('Shift', 70), ('SPACE', 320), ('<-', 70), ('GO', 70), ('X', 50)]
+        special_keys = [('Shift', 110), ('SPACE', 500), ('<-', 110), ('GO', 110), ('X', 80)]
         x = (WIDTH - sum(w for _, w in special_keys) - KEY_MARGIN * 4) // 2
         
         for label, width in special_keys:
@@ -119,8 +119,8 @@ class TouchKeyboard:
                 color = GOLD_DARK
             else:
                 color = BLUE_MID
-            pygame.draw.rect(self.screen, color, key_rect, border_radius=4)
-            pygame.draw.rect(self.screen, ACCENT if label == 'GO' else BLUE_LIGHT, key_rect, 1, border_radius=4)
+            pygame.draw.rect(self.screen, color, key_rect, border_radius=6)
+            pygame.draw.rect(self.screen, ACCENT if label == 'GO' else BLUE_LIGHT, key_rect, 2, border_radius=6)
             
             text_color = BLUE_DARK if label == 'GO' else WHITE
             text = self.font.render(label, True, text_color)
@@ -139,7 +139,7 @@ class TouchKeyboard:
             return None
         
         # Check regular keys
-        key_y = self.y_offset + 8
+        key_y = self.y_offset + 12
         for row in KEYBOARD_ROWS:
             row_width = len(row) * (KEY_WIDTH + KEY_MARGIN) - KEY_MARGIN
             key_x = (WIDTH - row_width) // 2
@@ -158,7 +158,7 @@ class TouchKeyboard:
         
         # Check special keys
         special_y = key_y
-        special_keys = [('SHIFT', 70), ('SPACE', 320), ('BACKSPACE', 70), ('GO', 70), ('HIDE', 50)]
+        special_keys = [('SHIFT', 110), ('SPACE', 500), ('BACKSPACE', 110), ('GO', 110), ('HIDE', 80)]
         key_x = (WIDTH - sum(w for _, w in special_keys) - KEY_MARGIN * 4) // 2
         
         for action, width in special_keys:
@@ -189,12 +189,12 @@ class RecipeApp:
         pygame.display.set_caption("AI Sous Chef")
         self.clock = pygame.time.Clock()
         
-        # Fonts - larger for 7" screen readability
-        self.font = pygame.font.SysFont("Georgia", 20)
-        self.font_large = pygame.font.SysFont("Georgia", 36, bold=True)
-        self.font_medium = pygame.font.SysFont("Georgia", 24)
-        self.font_small = pygame.font.SysFont("Georgia", 16)
-        self.font_italic = pygame.font.SysFont("Georgia", 18, italic=True)
+        # Fonts - scaled up for 1280x720
+        self.font = pygame.font.SysFont("Georgia", 32)
+        self.font_large = pygame.font.SysFont("Georgia", 56, bold=True)
+        self.font_medium = pygame.font.SysFont("Georgia", 38)
+        self.font_small = pygame.font.SysFont("Georgia", 26)
+        self.font_italic = pygame.font.SysFont("Georgia", 28, italic=True)
         
         # Initialize clients
         self.prompter = RecipePrompter(boto3.client('bedrock-runtime', region_name='us-east-1'))
@@ -373,72 +373,71 @@ class RecipeApp:
         content_height = HEIGHT - (KEYBOARD_HEIGHT if self.keyboard.visible else 0)
         
         # Header
-        pygame.draw.rect(self.screen, BLUE_DARK, (0, 0, WIDTH, 50))
+        pygame.draw.rect(self.screen, BLUE_DARK, (0, 0, WIDTH, 75))
         
         # Home button
-        home_rect = (15, 12, 60, 28)
-        self.draw_rounded_rect(self.screen, BLUE_MID, home_rect, 4, 1, ACCENT)
+        home_rect = (20, 18, 90, 42)
+        self.draw_rounded_rect(self.screen, BLUE_MID, home_rect, 6, 2, ACCENT)
         home_text = self.font_small.render("Home", True, CREAM)
-        self.screen.blit(home_text, (home_rect[0] + 10, home_rect[1] + 5))
+        self.screen.blit(home_text, (home_rect[0] + 15, home_rect[1] + 8))
         
         title = self.font_large.render("AI Sous Chef", True, CREAM)
-        self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 8))
-        pygame.draw.rect(self.screen, ACCENT, (WIDTH // 2 - title.get_width() // 2, 46, title.get_width(), 2))
+        self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 12))
+        pygame.draw.rect(self.screen, ACCENT, (WIDTH // 2 - title.get_width() // 2, 70, title.get_width(), 3))
         
         # Search box
-        search_y = 60
-        search_rect = (20, search_y, WIDTH - 210, 36)
-        self.draw_rounded_rect(self.screen, CREAM, search_rect, 6)
+        search_y = 95
+        search_rect = (30, search_y, WIDTH - 330, 54)
+        self.draw_rounded_rect(self.screen, CREAM, search_rect, 8)
         
         if self.search_text:
-            search_surface = self.font.render(self.search_text[-30:], True, BLACK)
+            search_surface = self.font.render(self.search_text[-40:], True, BLACK)
         else:
             search_surface = self.font_italic.render("What would you like to cook?", True, GRAY)
-        self.screen.blit(search_surface, (30, search_y + 9))
+        self.screen.blit(search_surface, (45, search_y + 12))
         
         # Cursor
         if self.active_input == "search" and pygame.time.get_ticks() % 1000 < 500:
-            cursor_x = 30 + self.font.size(self.search_text[-30:])[0] + 2
-            pygame.draw.rect(self.screen, BLACK, (cursor_x, search_y + 8, 2, 20))
+            cursor_x = 45 + self.font.size(self.search_text[-40:])[0] + 2
+            pygame.draw.rect(self.screen, BLACK, (cursor_x, search_y + 12, 2, 30))
+        
+        # Generate button
+        gen_rect = (WIDTH - 290, search_y, 120, 54)
+        self.draw_rounded_rect(self.screen, BLUE_MID, gen_rect, 8, 2, ACCENT)
+        gen_text = self.font_small.render("Generate", True, CREAM)
+        self.screen.blit(gen_text, (gen_rect[0] + 15, gen_rect[1] + 14))
         
         # Search button
-        btn_rect = (WIDTH - 100, search_y, 80, 36)
-        self.draw_rounded_rect(self.screen, ACCENT, btn_rect, 6)
+        btn_rect = (WIDTH - 155, search_y, 120, 54)
+        self.draw_rounded_rect(self.screen, ACCENT, btn_rect, 8)
         btn_text = self.font.render("Search", True, BLUE_DARK)
-        self.screen.blit(btn_text, (btn_rect[0] + 10, btn_rect[1] + 7))
-        
-        # Generate button (next to search)
-        gen_rect = (WIDTH - 185, search_y, 80, 36)
-        self.draw_rounded_rect(self.screen, BLUE_MID, gen_rect, 6, 1, ACCENT)
-        gen_text = self.font_small.render("Generate", True, CREAM)
-        self.screen.blit(gen_text, (gen_rect[0] + 8, gen_rect[1] + 9))
+        self.screen.blit(btn_text, (btn_rect[0] + 18, btn_rect[1] + 10))
         
         # Status
         status_surface = self.font_small.render(self.status, True, GRAY)
-        self.screen.blit(status_surface, (20, search_y + 42))
+        self.screen.blit(status_surface, (30, search_y + 62))
         
         # Results
-        results_y = 105
+        results_y = 175
         max_results = 4 if self.keyboard.visible else 6
         
         for i, recipe in enumerate(self.results[:max_results]):
-            if results_y > content_height - 50:
+            if results_y > content_height - 80:
                 break
             
-            card_rect = (20, results_y, WIDTH - 40, 56)
-            self.draw_rounded_rect(self.screen, BLUE_MID, card_rect, 8, 1, BLUE_LIGHT)
+            card_rect = (30, results_y, WIDTH - 60, 85)
+            self.draw_rounded_rect(self.screen, BLUE_MID, card_rect, 10, 2, BLUE_LIGHT)
             
             # Number badge
-            pygame.draw.circle(self.screen, ACCENT, (card_rect[0] + 25, card_rect[1] + 28), 14)
+            pygame.draw.circle(self.screen, ACCENT, (card_rect[0] + 40, card_rect[1] + 42), 22)
             num_text = self.font_small.render(str(i + 1), True, BLUE_DARK)
-            self.screen.blit(num_text, (card_rect[0] + 25 - num_text.get_width() // 2, card_rect[1] + 20))
+            self.screen.blit(num_text, (card_rect[0] + 40 - num_text.get_width() // 2, card_rect[1] + 30))
             
-            # Recipe name (with wrapping if needed)
+            # Recipe name
             name = recipe['name']
-            max_name_width = card_rect[2] - 60  # Leave room for badge
+            max_name_width = card_rect[2] - 100
             
             if self.font_medium.size(name)[0] > max_name_width:
-                # Truncate with ellipsis at word boundary
                 words = name.split()
                 truncated = ""
                 for word in words:
@@ -447,18 +446,18 @@ class RecipeApp:
                         truncated = test
                     else:
                         break
-                name = truncated + "..." if truncated else name[:20] + "..."
+                name = truncated + "..." if truncated else name[:25] + "..."
             
             name_surface = self.font_medium.render(name, True, CREAM)
-            self.screen.blit(name_surface, (card_rect[0] + 50, card_rect[1] + 6))
+            self.screen.blit(name_surface, (card_rect[0] + 80, card_rect[1] + 12))
             
             # Details
             cal = recipe.get('calories', 'N/A')
             details = f"{recipe.get('category', '')} • {cal} cal"
             details_surface = self.font_small.render(details, True, GRAY)
-            self.screen.blit(details_surface, (card_rect[0] + 50, card_rect[1] + 34))
+            self.screen.blit(details_surface, (card_rect[0] + 80, card_rect[1] + 52))
             
-            results_y += 62
+            results_y += 95
 
     def draw_recipe_view(self):
         recipe = self.prompter.current_recipe
@@ -468,40 +467,39 @@ class RecipeApp:
         content_height = HEIGHT - (KEYBOARD_HEIGHT if self.keyboard.visible else 0)
         
         # Header
-        pygame.draw.rect(self.screen, BLUE_DARK, (0, 0, WIDTH, 45))
+        pygame.draw.rect(self.screen, BLUE_DARK, (0, 0, WIDTH, 70))
         
-        # Back button (to search)
-        back_rect = (10, 8, 60, 30)
-        self.draw_rounded_rect(self.screen, BLUE_MID, back_rect, 4, 1, ACCENT)
+        # Back button
+        back_rect = (15, 15, 90, 45)
+        self.draw_rounded_rect(self.screen, BLUE_MID, back_rect, 6, 2, ACCENT)
         back_text = self.font_small.render("< Back", True, CREAM)
-        self.screen.blit(back_text, (back_rect[0] + 8, back_rect[1] + 6))
+        self.screen.blit(back_text, (back_rect[0] + 12, back_rect[1] + 10))
         
-        # Done button (to home)
-        done_rect = (WIDTH - 70, 8, 60, 30)
-        self.draw_rounded_rect(self.screen, ACCENT, done_rect, 4)
+        # Done button
+        done_rect = (WIDTH - 105, 15, 90, 45)
+        self.draw_rounded_rect(self.screen, ACCENT, done_rect, 6)
         done_text = self.font_small.render("Done", True, BLUE_DARK)
-        self.screen.blit(done_text, (done_rect[0] + 10, done_rect[1] + 6))
+        self.screen.blit(done_text, (done_rect[0] + 18, done_rect[1] + 10))
         
-        # Title (truncate to fit between buttons)
-        max_title_width = WIDTH - 160  # Leave room for Back and Done buttons
+        # Title
+        max_title_width = WIDTH - 240
         title_text = recipe.get('name', 'Recipe')
         title = self.font_medium.render(title_text, True, CREAM)
         
-        # Truncate if too wide
         while title.get_width() > max_title_width and len(title_text) > 10:
             title_text = title_text[:-4] + "..."
             title = self.font_medium.render(title_text, True, CREAM)
         
-        title_x = 80 + (WIDTH - 160 - title.get_width()) // 2
-        self.screen.blit(title, (title_x, 12))
+        title_x = 120 + (WIDTH - 240 - title.get_width()) // 2
+        self.screen.blit(title, (title_x, 18))
         
         # Content area
-        content_surface = pygame.Surface((WIDTH, 1500), pygame.SRCALPHA)
-        y = 10
+        content_surface = pygame.Surface((WIDTH, 2000), pygame.SRCALPHA)
+        y = 15
         
         # Info bar
-        info_rect = pygame.Rect(10, y, WIDTH - 20, 35)
-        self.draw_rounded_rect(content_surface, BLUE_MID, info_rect, 6)
+        info_rect = pygame.Rect(15, y, WIDTH - 30, 50)
+        self.draw_rounded_rect(content_surface, BLUE_MID, info_rect, 8)
         
         info_parts = [
             f"Time: {recipe.get('total_time', 'N/A')}",
@@ -512,18 +510,18 @@ class RecipeApp:
         
         info_text = " | ".join(info_parts)
         info_surface = self.font_small.render(info_text, True, CREAM)
-        content_surface.blit(info_surface, (20, y + 10))
-        y += 45
+        content_surface.blit(info_surface, (30, y + 14))
+        y += 65
         
         # Two column layout
-        col_width = (WIDTH - 30) // 2
+        col_width = (WIDTH - 45) // 2
         
         # Ingredients
         ing_label = self.font_medium.render("Ingredients", True, ACCENT)
-        content_surface.blit(ing_label, (10, y))
-        pygame.draw.rect(content_surface, ACCENT, (10, y + 28, 100, 2))
+        content_surface.blit(ing_label, (15, y))
+        pygame.draw.rect(content_surface, ACCENT, (15, y + 42, 150, 3))
         
-        ing_y = y + 35
+        ing_y = y + 55
         for ing in recipe.get('ingredients', [])[:15]:
             if isinstance(ing, dict):
                 qty = ing.get('quantity', '')
@@ -533,68 +531,66 @@ class RecipeApp:
             else:
                 ing_text = f"• {ing}"
             
-            # Proper word wrapping for ingredients
-            ing_lines = self._wrap_text(ing_text, col_width - 20)
+            ing_lines = self._wrap_text(ing_text, col_width - 30)
             for j, line in enumerate(ing_lines):
                 if j > 0:
-                    line = "  " + line  # Indent continuation lines
+                    line = "  " + line
                 ing_surface = self.font_small.render(line, True, CREAM)
-                content_surface.blit(ing_surface, (15, ing_y))
-                ing_y += 22
+                content_surface.blit(ing_surface, (20, ing_y))
+                ing_y += 34
         
         # Instructions
         inst_label = self.font_medium.render("Instructions", True, ACCENT)
-        content_surface.blit(inst_label, (col_width + 20, y))
-        pygame.draw.rect(content_surface, ACCENT, (col_width + 20, y + 28, 110, 2))
+        content_surface.blit(inst_label, (col_width + 30, y))
+        pygame.draw.rect(content_surface, ACCENT, (col_width + 30, y + 42, 165, 3))
         
-        inst_y = y + 35
+        inst_y = y + 55
         for i, step in enumerate(recipe.get('instructions', [])[:10], 1):
-            # Proper word wrapping for instructions
-            step_lines = self._wrap_text(f"{i}. {step}", col_width - 30)
+            step_lines = self._wrap_text(f"{i}. {step}", col_width - 45)
             for j, line in enumerate(step_lines):
                 if j > 0:
-                    line = "   " + line  # Indent continuation lines
+                    line = "   " + line
                 step_surface = self.font_small.render(line, True, CREAM)
-                content_surface.blit(step_surface, (col_width + 20, inst_y))
-                inst_y += 22
-            inst_y += 4
+                content_surface.blit(step_surface, (col_width + 30, inst_y))
+                inst_y += 34
+            inst_y += 6
         
-        self.max_scroll = max(ing_y, inst_y) - 150
+        self.max_scroll = max(ing_y, inst_y) - 200
         
         # Blit scrolled content
-        visible_height = content_height - 95
-        self.screen.blit(content_surface, (0, 50), (0, self.scroll_offset, WIDTH, visible_height))
+        visible_height = content_height - 145
+        self.screen.blit(content_surface, (0, 75), (0, self.scroll_offset, WIDTH, visible_height))
         
         # Modify bar at bottom
-        mod_y = content_height - 50
-        pygame.draw.rect(self.screen, BLUE_DARK, (0, mod_y, WIDTH, 50))
-        pygame.draw.rect(self.screen, ACCENT, (0, mod_y, WIDTH, 2))
+        mod_y = content_height - 75
+        pygame.draw.rect(self.screen, BLUE_DARK, (0, mod_y, WIDTH, 75))
+        pygame.draw.rect(self.screen, ACCENT, (0, mod_y, WIDTH, 3))
         
         # Modify input
-        mod_rect = (10, mod_y + 10, WIDTH - 100, 32)
-        self.draw_rounded_rect(self.screen, CREAM, mod_rect, 4)
+        mod_rect = (15, mod_y + 15, WIDTH - 150, 48)
+        self.draw_rounded_rect(self.screen, CREAM, mod_rect, 6)
         
         if self.modify_text:
-            mod_surface = self.font_small.render(self.modify_text[-40:], True, BLACK)
+            mod_surface = self.font_small.render(self.modify_text[-50:], True, BLACK)
         else:
             mod_surface = self.font_italic.render("Tap to modify recipe...", True, GRAY)
-        self.screen.blit(mod_surface, (18, mod_y + 17))
+        self.screen.blit(mod_surface, (28, mod_y + 26))
         
         # Cursor
         if self.active_input == "modify" and pygame.time.get_ticks() % 1000 < 500:
-            cursor_x = 18 + self.font_small.size(self.modify_text[-40:])[0] + 2
-            pygame.draw.rect(self.screen, BLACK, (cursor_x, mod_y + 14, 2, 20))
+            cursor_x = 28 + self.font_small.size(self.modify_text[-50:])[0] + 2
+            pygame.draw.rect(self.screen, BLACK, (cursor_x, mod_y + 22, 2, 30))
         
         # Modify button
-        mod_btn = (WIDTH - 80, mod_y + 10, 70, 32)
-        self.draw_rounded_rect(self.screen, ACCENT, mod_btn, 4)
+        mod_btn = (WIDTH - 125, mod_y + 15, 110, 48)
+        self.draw_rounded_rect(self.screen, ACCENT, mod_btn, 6)
         mod_btn_text = self.font_small.render("Modify", True, BLUE_DARK)
-        self.screen.blit(mod_btn_text, (mod_btn[0] + 10, mod_btn[1] + 7))
+        self.screen.blit(mod_btn_text, (mod_btn[0] + 18, mod_btn[1] + 12))
         
         # Status
         if self.modify_status:
             status_surface = self.font_small.render(self.modify_status, True, GRAY)
-            self.screen.blit(status_surface, (10, mod_y - 18))
+            self.screen.blit(status_surface, (15, mod_y - 28))
 
     def _wrap_text(self, text, max_width):
         """Wrap text to fit within max_width pixels."""
@@ -637,13 +633,12 @@ class RecipeApp:
         content_height = HEIGHT - (KEYBOARD_HEIGHT if self.keyboard.visible else 0)
         
         if self.view == "home":
-            # Tap anywhere on home screen goes to search
             self.view = "search"
             return
         
         if self.view == "search":
             # Home button
-            if 15 <= x <= 75 and 12 <= y <= 40:
+            if 20 <= x <= 110 and 18 <= y <= 60:
                 self.view = "home"
                 self.search_text = ""
                 self.results = []
@@ -651,32 +646,32 @@ class RecipeApp:
                 return
             
             # Search box tap
-            if 20 <= x <= WIDTH - 210 and 60 <= y <= 96:
+            if 30 <= x <= WIDTH - 330 and 95 <= y <= 149:
                 self.active_input = "search"
                 self.keyboard.visible = True
                 return
             
-            # Search button
-            if WIDTH - 100 <= x <= WIDTH - 20 and 60 <= y <= 96:
-                self.search()
-                return
-            
-            # Generate button (next to search)
-            if WIDTH - 185 <= x <= WIDTH - 105 and 60 <= y <= 96:
+            # Generate button
+            if WIDTH - 290 <= x <= WIDTH - 170 and 95 <= y <= 149:
                 self.generate_recipe()
                 return
             
+            # Search button
+            if WIDTH - 155 <= x <= WIDTH - 35 and 95 <= y <= 149:
+                self.search()
+                return
+            
             # Results
-            results_y = 105
+            results_y = 175
             for i in range(min(len(self.results), 6)):
-                if 20 <= x <= WIDTH - 20 and results_y <= y <= results_y + 50:
+                if 30 <= x <= WIDTH - 30 and results_y <= y <= results_y + 85:
                     self.select_recipe(i)
                     return
-                results_y += 56
+                results_y += 95
                 
         elif self.view == "recipe":
-            # Back button (to search)
-            if 10 <= x <= 70 and 8 <= y <= 38:
+            # Back button
+            if 15 <= x <= 105 and 15 <= y <= 60:
                 self.view = "search"
                 self.scroll_offset = 0
                 self.modify_text = ""
@@ -685,8 +680,8 @@ class RecipeApp:
                 self.prompter.clear_conversation()
                 return
             
-            # Done button (to home)
-            if WIDTH - 70 <= x <= WIDTH - 10 and 8 <= y <= 38:
+            # Done button
+            if WIDTH - 105 <= x <= WIDTH - 15 and 15 <= y <= 60:
                 self.view = "home"
                 self.scroll_offset = 0
                 self.modify_text = ""
@@ -698,14 +693,14 @@ class RecipeApp:
                 return
             
             # Modify input tap
-            mod_y = content_height - 50
-            if 10 <= x <= WIDTH - 100 and mod_y + 10 <= y <= mod_y + 42:
+            mod_y = content_height - 75
+            if 15 <= x <= WIDTH - 150 and mod_y + 15 <= y <= mod_y + 63:
                 self.active_input = "modify"
                 self.keyboard.visible = True
                 return
             
             # Modify button
-            if WIDTH - 80 <= x <= WIDTH - 10 and mod_y + 10 <= y <= mod_y + 42:
+            if WIDTH - 125 <= x <= WIDTH - 15 and mod_y + 15 <= y <= mod_y + 63:
                 self.modify_recipe()
                 return
 
@@ -721,16 +716,19 @@ class RecipeApp:
                     if event.button == 1:
                         self.handle_touch(event.pos)
                     elif event.button == 4:  # Scroll up
-                        self.scroll_offset = max(0, self.scroll_offset - 30)
+                        self.scroll_offset = max(0, self.scroll_offset - 40)
                     elif event.button == 5:  # Scroll down
                         if self.view == "recipe":
-                            self.scroll_offset = min(self.max_scroll, self.scroll_offset + 30)
+                            self.scroll_offset = min(self.max_scroll, self.scroll_offset + 40)
                 
                 elif event.type == pygame.FINGERDOWN:
-                    # Touch screen support
                     touch_x = int(event.x * WIDTH)
                     touch_y = int(event.y * HEIGHT)
                     self.handle_touch((touch_x, touch_y))
+                    
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
             
             # Draw
             self.screen.fill(BLUE_DARK)
@@ -763,12 +761,12 @@ class RecipeApp:
                 
                 ticks = pygame.time.get_ticks()
                 for i in range(8):
-                    cx = WIDTH // 2 + int(25 * pygame.math.Vector2(1, 0).rotate(i * 45 + ticks / 10).x)
-                    cy = HEIGHT // 2 + int(25 * pygame.math.Vector2(1, 0).rotate(i * 45 + ticks / 10).y)
-                    pygame.draw.circle(self.screen, GOLD, (cx, cy), 5)
+                    cx = WIDTH // 2 + int(40 * pygame.math.Vector2(1, 0).rotate(i * 45 + ticks / 10).x)
+                    cy = HEIGHT // 2 + int(40 * pygame.math.Vector2(1, 0).rotate(i * 45 + ticks / 10).y)
+                    pygame.draw.circle(self.screen, GOLD, (cx, cy), 8)
                 
                 loading_text = self.font_medium.render("Loading...", True, CREAM)
-                self.screen.blit(loading_text, (WIDTH // 2 - loading_text.get_width() // 2, HEIGHT // 2 + 40))
+                self.screen.blit(loading_text, (WIDTH // 2 - loading_text.get_width() // 2, HEIGHT // 2 + 60))
             
             pygame.display.flip()
             self.clock.tick(60)

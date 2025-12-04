@@ -32,15 +32,15 @@ class HomeScreen:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
-        self.font_large = pygame.font.SysFont("Georgia", 48, bold=True)
-        self.font_medium = pygame.font.SysFont("Georgia", 24)
-        self.font_small = pygame.font.SysFont("Georgia", 16)
+        # Scaled fonts for 1280x720
+        self.font_large = pygame.font.SysFont("Georgia", 72, bold=True)
+        self.font_medium = pygame.font.SysFont("Georgia", 36)
+        self.font_small = pygame.font.SysFont("Georgia", 24)
         
-        # Animation state (for future use)
+        # Animation state
         self.ticks = 0
         
         # Optional: Load background image
-        # self.background = pygame.image.load("assets/background.png")
         self.background = None
     
     def update(self):
@@ -73,7 +73,7 @@ class HomeScreen:
             b = int(42 + (59 - 42) * ratio)
             pygame.draw.line(screen, (r, g, b), (0, y), (self.width, y))
         
-        # Subtle decorative circles (can be made more elaborate later)
+        # Subtle decorative circles
         self._draw_decorations(screen)
     
     def _draw_decorations(self, screen: pygame.Surface):
@@ -85,14 +85,14 @@ class HomeScreen:
         # Create transparent surface for decorations
         decor_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         
-        # Corner accents
-        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (-50, -50), 200, 2)
-        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (self.width + 50, self.height + 50), 200, 2)
+        # Corner accents - scaled up
+        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (-80, -80), 320, 3)
+        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (self.width + 80, self.height + 80), 320, 3)
         
-        # Center decorative ring
-        center_x, center_y = self.width // 2, self.height // 2 - 20
-        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (center_x, center_y), 120, 1)
-        pygame.draw.circle(decor_surface, (*ACCENT[:3], int(alpha * 0.7)), (center_x, center_y), 140, 1)
+        # Center decorative ring - scaled up
+        center_x, center_y = self.width // 2, self.height // 2 - 30
+        pygame.draw.circle(decor_surface, (*ACCENT[:3], alpha), (center_x, center_y), 180, 2)
+        pygame.draw.circle(decor_surface, (*ACCENT[:3], int(alpha * 0.7)), (center_x, center_y), 210, 2)
         
         screen.blit(decor_surface, (0, 0))
     
@@ -100,13 +100,13 @@ class HomeScreen:
         """Draw the app title."""
         title = self.font_large.render("AI Sous Chef", True, CREAM)
         title_x = self.width // 2 - title.get_width() // 2
-        title_y = self.height // 2 - 60
+        title_y = self.height // 2 - 90
         screen.blit(title, (title_x, title_y))
         
-        # Accent underline
-        line_width = title.get_width() + 40
+        # Accent underline - scaled
+        line_width = title.get_width() + 60
         line_x = self.width // 2 - line_width // 2
-        pygame.draw.rect(screen, ACCENT, (line_x, title_y + title.get_height() + 5, line_width, 3))
+        pygame.draw.rect(screen, ACCENT, (line_x, title_y + title.get_height() + 8, line_width, 4))
     
     def _draw_prompt(self, screen: pygame.Surface):
         """Draw the tap to start prompt."""
@@ -116,7 +116,7 @@ class HomeScreen:
         
         prompt = self.font_medium.render("Tap to start cooking", True, (*CREAM[:3], alpha))
         prompt_x = self.width // 2 - prompt.get_width() // 2
-        prompt_y = self.height // 2 + 40
+        prompt_y = self.height // 2 + 60
         screen.blit(prompt, (prompt_x, prompt_y))
     
     def handle_touch(self, pos: tuple) -> bool:
@@ -144,9 +144,7 @@ class AnimatedHomeScreen(HomeScreen):
     
     def _draw_decorations(self, screen):
         super()._draw_decorations(screen)
-        
         # Add floating particles, animated patterns, etc.
-        # TODO: Implement when ready for fancier UI
         pass
 
 
