@@ -42,7 +42,7 @@ KEYBOARD_ROWS = [
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'],
 ]
-KEYBOARD_HEIGHT = 280
+KEYBOARD_HEIGHT = 295
 KEY_WIDTH = 100
 KEY_HEIGHT = 50
 KEY_MARGIN = 5
@@ -54,7 +54,7 @@ class TouchKeyboard:
         self.font = font
         self.visible = False
         self.shift = False
-        self.y_offset = HEIGHT - KEYBOARD_HEIGHT - 10  # 10px bottom margin
+        self.y_offset = HEIGHT - KEYBOARD_HEIGHT
         self.pressed_key = None
         self.press_time = 0
         self.PRESS_DURATION = 100  # milliseconds
@@ -63,8 +63,8 @@ class TouchKeyboard:
         if not self.visible:
             return
             
-        # Keyboard background
-        pygame.draw.rect(self.screen, BLUE_DARK, (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT))
+        # Keyboard background (with bottom margin)
+        pygame.draw.rect(self.screen, BLUE_DARK, (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT + 10))
         pygame.draw.rect(self.screen, ACCENT, (0, self.y_offset, WIDTH, 3))
         
         y = self.y_offset + 12
