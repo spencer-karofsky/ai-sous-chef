@@ -2,6 +2,13 @@
 
 ### Description
 
+<img width="1181" height="747" alt="image" src="https://github.com/user-attachments/assets/3ef6ea7c-f538-4a12-a2be-4dca1a4866bb" />
+<img width="1170" height="722" alt="image" src="https://github.com/user-attachments/assets/dc0df563-57b3-4b91-a4c7-b09c0d8d92ca" />
+<img width="1028" height="728" alt="image" src="https://github.com/user-attachments/assets/adb7b527-ee24-46d3-83ed-83ad7986f09a" />
+
+
+
+
 **A hands-free, low-cost kitchen assistant powered by AWS and on-device interaction.**
 
 AI Sous Chef turns cooking into a frictionless experience.
