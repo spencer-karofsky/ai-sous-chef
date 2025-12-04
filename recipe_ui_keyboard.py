@@ -54,7 +54,7 @@ class TouchKeyboard:
         self.font = font
         self.visible = False
         self.shift = False
-        self.y_offset = HEIGHT - KEYBOARD_HEIGHT
+        self.y_offset = HEIGHT - KEYBOARD_HEIGHT - 10  # 10px bottom margin
         self.pressed_key = None
         self.press_time = 0
         self.PRESS_DURATION = 100  # milliseconds
