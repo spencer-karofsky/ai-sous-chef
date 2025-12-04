@@ -143,14 +143,16 @@ class Config:
         
         # Try official Raspberry Pi touchscreen backlight
         brightness_paths = [
+            '/sys/class/backlight/11-0045/brightness',  # Pi Touch Display 2 (yours)
+            '/sys/class/backlight/10-0045/brightness',  # Pi Touch Display 2 (alternate)
             '/sys/class/backlight/rpi_backlight/brightness',
-            '/sys/class/backlight/10-0045/brightness',  # Pi Touch Display 2
             '/sys/class/backlight/backlight/brightness',
         ]
         
         max_brightness_paths = [
-            '/sys/class/backlight/rpi_backlight/max_brightness',
+            '/sys/class/backlight/11-0045/max_brightness',
             '/sys/class/backlight/10-0045/max_brightness',
+            '/sys/class/backlight/rpi_backlight/max_brightness',
             '/sys/class/backlight/backlight/max_brightness',
         ]
         
@@ -166,7 +168,7 @@ class Config:
                     if max_file.exists():
                         max_brightness = int(max_file.read_text().strip())
                     else:
-                        max_brightness = 255  # Default assumption
+                        max_brightness = 255
                     
                     # Calculate actual value (minimum 10% to prevent black screen)
                     min_value = int(max_brightness * 0.1)
@@ -178,7 +180,6 @@ class Config:
                     print(f"Brightness set to {value}% ({actual}/{max_brightness})")
                     return True
                 except PermissionError:
-                    # Try with sudo via subprocess
                     try:
                         import subprocess
                         if max_file.exists():
