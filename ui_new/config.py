@@ -134,19 +134,73 @@ class Config:
         """Set display brightness (Pi only)."""
         import platform
         
+        # Save to config regardless of platform
+        self.set('brightness', value)
+        
         if platform.system() != 'Linux':
+            print(f"Brightness set to {value}% (mock - not on Pi)")
             return False
         
-        brightness_path = Path('/sys/class/backlight/rpi_backlight/brightness')
-        max_path = Path('/sys/class/backlight/rpi_backlight/max_brightness')
+        # Try official Raspberry Pi touchscreen backlight
+        brightness_paths = [
+            '/sys/class/backlight/rpi_backlight/brightness',
+            '/sys/class/backlight/10-0045/brightness',  # Pi Touch Display 2
+            '/sys/class/backlight/backlight/brightness',
+        ]
         
-        if not brightness_path.exists():
-            return False
+        max_brightness_paths = [
+            '/sys/class/backlight/rpi_backlight/max_brightness',
+            '/sys/class/backlight/10-0045/max_brightness',
+            '/sys/class/backlight/backlight/max_brightness',
+        ]
         
-        try:
-            max_brightness = int(max_path.read_text().strip())
-            actual = int(max_brightness * value / 100)
-            brightness_path.write_text(str(actual))
-            return True
-        except:
-            return False
+        from pathlib import Path
+        
+        for bright_path, max_path in zip(brightness_paths, max_brightness_paths):
+            brightness_file = Path(bright_path)
+            max_file = Path(max_path)
+            
+            if brightness_file.exists():
+                try:
+                    # Read max brightness
+                    if max_file.exists():
+                        max_brightness = int(max_file.read_text().strip())
+                    else:
+                        max_brightness = 255  # Default assumption
+                    
+                    # Calculate actual value (minimum 10% to prevent black screen)
+                    min_value = int(max_brightness * 0.1)
+                    actual = int(max_brightness * value / 100)
+                    actual = max(min_value, actual)
+                    
+                    # Write brightness
+                    brightness_file.write_text(str(actual))
+                    print(f"Brightness set to {value}% ({actual}/{max_brightness})")
+                    return True
+                except PermissionError:
+                    # Try with sudo via subprocess
+                    try:
+                        import subprocess
+                        if max_file.exists():
+                            max_brightness = int(max_file.read_text().strip())
+                        else:
+                            max_brightness = 255
+                        
+                        min_value = int(max_brightness * 0.1)
+                        actual = int(max_brightness * value / 100)
+                        actual = max(min_value, actual)
+                        
+                        subprocess.run(
+                            ['sudo', 'sh', '-c', f'echo {actual} > {bright_path}'],
+                            check=True,
+                            timeout=5
+                        )
+                        print(f"Brightness set to {value}% via sudo")
+                        return True
+                    except Exception as e:
+                        print(f"Brightness sudo error: {e}")
+                except Exception as e:
+                    print(f"Brightness error for {bright_path}: {e}")
+        
+        print("No backlight control found")
+        return False

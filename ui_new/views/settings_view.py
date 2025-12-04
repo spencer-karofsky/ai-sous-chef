@@ -415,19 +415,21 @@ class SettingsView:
             return
         
         item = self.dragging_slider
-        if '_slider_rect' not in item:
-            return
         
-        slider_x, slider_y, slider_width, _ = item['_slider_rect']
+        # Calculate slider position
+        slider_width = 150
+        slider_x = WIDTH - 80 - slider_width + 20
         
-        # Calculate new value
+        # Calculate new value from x position
         relative_x = x - slider_x
         new_value = max(0, min(100, int(relative_x / slider_width * 100)))
+        
+        # Update item value
         item['value'] = new_value
         
-        # Apply brightness
-        self.config.set('brightness', new_value)
-        self.config.set_brightness(new_value)
+        # Apply brightness immediately
+        if item['id'] == 'brightness':
+            self.config.set_brightness(new_value)
     
     def handle_drag_end(self):
         """End slider dragging."""
