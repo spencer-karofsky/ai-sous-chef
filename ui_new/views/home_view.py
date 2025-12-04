@@ -34,7 +34,7 @@ class HomeView:
     def _draw_welcome(self, screen):
         y = 80
         
-        greeting = self.fonts['title'].render("What's cooking?", True, SOFT_BLACK)
+        greeting = self.fonts['title'].render("AI Sous Chef", True, SOFT_BLACK)
         screen.blit(greeting, (40, y))
         
         subtitle = self.fonts['body'].render("Find a recipe or create something new", True, DARK_GRAY)
