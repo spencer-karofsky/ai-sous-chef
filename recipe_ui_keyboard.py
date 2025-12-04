@@ -33,7 +33,7 @@ RED_SOFT = (198, 86, 86)
 ACCENT = (100, 149, 237)  # Cornflower blue accent
 
 # Screen dimensions for 7" RPi display
-WIDTH, HEIGHT = 800, 480
+WIDTH, HEIGHT = 1280, 720
 
 # Keyboard layout
 KEYBOARD_ROWS = [
