@@ -10,10 +10,11 @@ Authors:
 import boto3
 import json
 
-from infra.managers.bedrock_manager import BedrockManager
+from logic.prompting import RecipePrompter
 from infra.managers.dynamodb_manager import DynamoDBItemManager
 from infra.managers.s3_manager import S3ObjectManager
 from infra.config import AWS_RESOURCES
+
 
 def _print_recipe(recipe: dict) -> None:
     """Pretty print a recipe"""
@@ -24,22 +25,59 @@ def _print_recipe(recipe: dict) -> None:
     if recipe.get('description'):
         print(f"\n{recipe['description']}")
     
-    print(f"\nTime: {recipe.get('total_time', 'N/A')}")
+    # Times
+    times = []
+    if recipe.get('prep_time'):
+        times.append(f"Prep: {recipe['prep_time']}")
+    if recipe.get('cook_time'):
+        times.append(f"Cook: {recipe['cook_time']}")
+    if recipe.get('total_time'):
+        times.append(f"Total: {recipe['total_time']}")
+    if times:
+        print(f"\n{' | '.join(times)}")
     
+    if recipe.get('servings'):
+        print(f"Servings: {recipe['servings']}")
+    
+    # Nutrition
     if recipe.get('nutrition'):
         n = recipe['nutrition']
-        print(f"Nutrition: {n.get('calories', 'N/A')} cal | {n.get('protein', 'N/A')} protein")
+        nutrition_parts = []
+        if n.get('calories'):
+            nutrition_parts.append(f"{n['calories']} cal")
+        if n.get('protein'):
+            nutrition_parts.append(f"{n['protein']} protein")
+        if n.get('carbs'):
+            nutrition_parts.append(f"{n['carbs']} carbs")
+        if n.get('fat'):
+            nutrition_parts.append(f"{n['fat']} fat")
+        if nutrition_parts:
+            print(f"Nutrition: {' | '.join(nutrition_parts)}")
 
+    # Ingredients
     print("\nIngredients:")
     for ing in recipe.get('ingredients', []):
         if isinstance(ing, dict):
-            print(f"  - {ing.get('quantity', '')} {ing.get('item', '')}")
+            qty = ing.get('quantity', '')
+            unit = ing.get('unit', '')
+            item = ing.get('item', '')
+            notes = ing.get('notes', '')
+            
+            ing_str = f"  - {qty} {unit} {item}".strip()
+            if notes:
+                ing_str += f" ({notes})"
+            print(ing_str)
         else:
             print(f"  - {ing}")
 
+    # Instructions
     print("\nInstructions:")
     for i, step in enumerate(recipe.get('instructions', []), 1):
         print(f"  {i}. {step}")
+    
+    # Tags
+    if recipe.get('tags'):
+        print(f"\nTags: {', '.join(recipe['tags'])}")
     
     print()
 
@@ -53,7 +91,7 @@ def _build_filter(params: dict) -> tuple:
     """
     filter_parts = []
     expression_values = {}
-    expression_names = {'#n': 'name'} # "name" is a reserved word
+    expression_names = {'#n': 'name'}
 
     # Keywords search name, description, and keywords list
     keyword_parts = []
@@ -65,8 +103,6 @@ def _build_filter(params: dict) -> tuple:
 
     if keyword_parts:
         filter_parts.append(f"({' OR '.join(keyword_parts)})")
-
-    expression_names = {'#n': 'name'}
 
     if params.get('category'):
         filter_parts.append('category = :cat')
@@ -84,11 +120,37 @@ def _build_filter(params: dict) -> tuple:
         expression_names
     )
 
+
+def _recipe_conversation(prompter: RecipePrompter) -> None:
+    """Handle recipe modification requests"""
+    print("\n" + "-"*50)
+    print("Modify this recipe (e.g., 'make it vegetarian', 'double the servings')")
+    print("Type 'done' to search again")
+    print("-"*50)
+    
+    while True:
+        user_input = input("\n> ").strip()
+        
+        if not user_input:
+            continue
+            
+        if user_input.lower() in ['done', 'back', 'new', 'search']:
+            prompter.clear_conversation()
+            print()
+            break
+        
+        response_text, modified_recipe = prompter.chat(user_input)
+        print(f"\n{response_text}")
+        
+        if modified_recipe:
+            _print_recipe(modified_recipe)
+
+
 def recipe_search() -> None:
     """Interactive recipe search"""
     
     # Initialize clients
-    bedrock = BedrockManager(boto3.client('bedrock-runtime', region_name='us-east-1'))
+    prompter = RecipePrompter(boto3.client('bedrock-runtime', region_name='us-east-1'))
     dynamodb = DynamoDBItemManager(boto3.client('dynamodb', region_name='us-east-1'))
     s3 = S3ObjectManager()
 
@@ -108,7 +170,7 @@ def recipe_search() -> None:
 
         # Extract search params
         print("\nSearching...")
-        params = bedrock.extract_search_params(user_input)
+        params = prompter.extract_search_params(user_input)
         
         if not params:
             print("Sorry, I couldn't understand that. Try again.\n")
@@ -133,13 +195,14 @@ def recipe_search() -> None:
             
             if generate == 'y':
                 print("\nGenerating recipe...")
-                recipe = bedrock.generate_recipe(user_input, AWS_RESOURCES['bedrock_model_id_generate_recipe'])
+                recipe = prompter.generate_recipe(user_input)
                 if recipe:
                     _print_recipe(recipe)
+                    _recipe_conversation(prompter)
             continue
 
         # Rank results
-        top_recipes = bedrock.rank_recipes(user_input, results, top_n=5, model=AWS_RESOURCES['bedrock_model_id_rank_recipes'])
+        top_recipes = prompter.rank_recipes(user_input, results, top_n=5)
 
         # Present options
         print(f"\nFound {len(results)} recipes. Top matches:\n")
@@ -156,7 +219,7 @@ def recipe_search() -> None:
         if choice == '0':
             # Generate new recipe
             print("\nGenerating recipe...")
-            recipe = bedrock.generate_recipe(user_input, AWS_RESOURCES['bedrock_model_id_extract_search_params'])
+            recipe = prompter.generate_recipe(user_input)
             
         elif choice.isdigit() and 1 <= int(choice) <= len(top_recipes):
             # Fetch from S3 and format
@@ -166,7 +229,7 @@ def recipe_search() -> None:
             raw = s3.get_object(AWS_RESOURCES['s3_clean_bucket_name'], selected['s3_key'])
             if raw:
                 raw_recipe = json.loads(raw.decode('utf-8'))
-                recipe = bedrock.format_recipe(raw_recipe, AWS_RESOURCES['bedrock_model_id_format_recipe'])
+                recipe = prompter.format_recipe(raw_recipe)
             else:
                 print("Failed to fetch recipe from S3.")
                 continue
@@ -174,13 +237,15 @@ def recipe_search() -> None:
             print("Invalid choice.\n")
             continue
 
-        # Display recipe
+        # Display recipe and enter conversation mode
         if recipe:
             _print_recipe(recipe)
+            _recipe_conversation(prompter)
         else:
             print("Failed to process recipe.\n")
 
     print("\nGoodbye!")
+
 
 if __name__ == '__main__':
     recipe_search()

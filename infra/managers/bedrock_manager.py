@@ -8,7 +8,6 @@ from botocore.exceptions import ClientError
 from botocore.client import BaseClient
 from typing import List, Dict, Optional
 
-
 class BedrockManager(BedrockInterface):
     def __init__(
         self,
@@ -31,7 +30,7 @@ class BedrockManager(BedrockInterface):
         prompt: str,
         model_id: str = 'claude-haiku-3',
         max_tokens: int = 1024,
-        temperature: float = 0.7,
+        temperature: float = 0.2,
     ) -> Optional[str]:
         """
         Base LLM call

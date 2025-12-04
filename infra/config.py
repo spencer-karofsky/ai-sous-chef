@@ -41,10 +41,10 @@ AWS_RESOURCES = {
     'dynamodb_recipes_table_partition_key': 'recipe_id',
 
     # Bedrock
-    'bedrock_model_id_extract_search_params': 'claude-haiku-3', # LLM
-    'bedrock_model_id_rank_recipes': 'claude-haiku-3',
-    'bedrock_model_id_format_recipe': 'claude-haiku-3',
-    'bedrock_model_id_generate_recipe': 'claude-sonnet-3-5',
+    'bedrock_model_id_extract_search_params': 'anthropic.claude-3-haiku-20240307-v1:0',
+    'bedrock_model_id_rank_recipes': 'anthropic.claude-3-haiku-20240307-v1:0',
+    'bedrock_model_id_format_recipe': 'anthropic.claude-3-haiku-20240307-v1:0',
+    'bedrock_model_id_generate_recipe': 'anthropic.claude-3-5-sonnet-20240620-v1:0',
 }
 
 EC2_USER_DATA_SCRIPT = """#!/bin/bash
