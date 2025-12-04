@@ -63,6 +63,7 @@ class SettingsView:
                     {'id': 'restart', 'label': 'Restart app', 'type': 'action'},
                     {'id': 'clear_cache', 'label': 'Clear cache', 'type': 'action'},
                     {'id': 'factory_reset', 'label': 'Factory reset', 'type': 'danger', 'subtitle': 'Delete all config files'},
+                    {'id': 'shutdown', 'label': 'Shut down', 'type': 'danger', 'subtitle': 'Power off the device'},
                 ]
             },
         ]
@@ -218,6 +219,9 @@ class SettingsView:
         elif self.modal == 'confirm_clear':
             self._draw_confirm_modal(screen, modal_x, modal_y, modal_width, modal_height,
                                      "Clear Cache", "This will delete all cached data. Continue?")
+        elif self.modal == 'confirm_shutdown':
+            self._draw_confirm_modal(screen, modal_x, modal_y, modal_width, modal_height,
+                                     "Shut Down", "Are you sure you want to power off the device?")
     
     def _draw_system_info_modal(self, screen, x, y, w, h):
         title = self.fonts['header'].render("System Info", True, SOFT_BLACK)
@@ -332,7 +336,7 @@ class SettingsView:
                 self.modal = None
                 return 'modal_closed'
         
-        elif self.modal in ('confirm_reset', 'confirm_clear'):
+        elif self.modal in ('confirm_reset', 'confirm_clear', 'confirm_shutdown'):
             if modal_x + 30 <= x <= modal_x + 130 and btn_y <= y <= btn_y + 40:
                 self.modal = None
                 return 'modal_cancelled'
@@ -343,6 +347,8 @@ class SettingsView:
                     self._build_sections()
                 elif self.modal == 'confirm_clear':
                     self.config.clear_cache()
+                elif self.modal == 'confirm_shutdown':
+                    self._do_shutdown()
                 self.modal = None
                 return 'modal_confirmed'
         
@@ -370,6 +376,8 @@ class SettingsView:
         elif item['type'] == 'danger':
             if item['id'] == 'factory_reset':
                 self.modal = 'confirm_reset'
+            elif item['id'] == 'shutdown':
+                self.modal = 'confirm_shutdown'
             return f"danger_{item['id']}"
         
         elif item['type'] == 'action':
@@ -416,3 +424,20 @@ class SettingsView:
     def handle_scroll(self, delta):
         if not self.modal:
             self.scroll_offset = max(0, min(self.max_scroll, self.scroll_offset + delta))
+    
+    def _do_shutdown(self):
+        """Shut down the device."""
+        import platform
+        import subprocess
+        
+        if platform.system() == 'Linux':
+            try:
+                subprocess.run(['sudo', 'shutdown', '-h', 'now'], check=True)
+            except Exception as e:
+                print(f"Shutdown error: {e}")
+        else:
+            print("Shutdown requested (mock - not on Pi)")
+            # On non-Linux, just quit the app
+            import pygame
+            pygame.quit()
+            sys.exit(0)
