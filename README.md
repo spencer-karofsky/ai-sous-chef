@@ -13,6 +13,12 @@ Built with a custom ETL pipeline, a keyword-search engine, and a minimal AWS arc
 The motivation is simple:
 Cooking shouldn’t require a phone, a search engine, or patience. Just ask, and cook.
 
+### To Run
+
+1. Clone to Raspberry Pi
+2. `cd ~/ai-sous-chef`
+3. `python run_new.py`
+
 
 ### AWS Disclaimer
 
