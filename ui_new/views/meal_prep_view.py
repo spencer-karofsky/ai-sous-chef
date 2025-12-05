@@ -14,17 +14,17 @@ from ui_new.constants import *
 WARM_BG = (255, 251, 245)
 
 # Meal card colors
-CARD_BORDER = (226, 226, 226)  # #e2e2e2
-CARD_TEXT = (51, 51, 51)  # #333
+CARD_BORDER = (226, 226, 226)
+CARD_TEXT = (51, 51, 51)
 
 # Active card - teal at 60-70% opacity over white
-ACTIVE_CARD_BG = (165, 205, 218)  # Teal ~65% opacity approximation
+ACTIVE_CARD_BG = (165, 205, 218)
 ACTIVE_CARD_TEXT = SOFT_BLACK
 
 # Meal type micro-label colors
-BREAKFAST_COLOR = (255, 246, 210)  # #fff6d2
-LUNCH_COLOR = (232, 240, 232)  # #e8f0e8
-DINNER_COLOR = (243, 237, 228)  # #f3ede4
+BREAKFAST_COLOR = (255, 246, 210) # #fff6d2
+LUNCH_COLOR = (232, 240, 232) # #e8f0e8
+DINNER_COLOR = (243, 237, 228) # #f3ede4
 
 MEAL_COLORS = {
     'Breakfast': BREAKFAST_COLOR,
@@ -77,6 +77,8 @@ class MealPrepView:
         self.config = config
     
     def draw(self, screen, state, keyboard_visible=False):
+        screen.fill(WARM_BG)
+        
         content_bottom = HEIGHT - NAV_HEIGHT
         if keyboard_visible:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
@@ -131,7 +133,7 @@ class MealPrepView:
             btn_text = self.fonts['small'].render("✦ Regenerate", True, WHITE)
             text_x = btn_rect.x + (btn_width - btn_text.get_width()) // 2
             screen.blit(btn_text, (text_x, btn_rect.y + 12))
-    
+
     def _draw_empty_state(self, screen):
         """Draw empty state with generate button."""
         cx, cy = WIDTH // 2, HEIGHT // 2 - 60
@@ -172,10 +174,13 @@ class MealPrepView:
         
         pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
         
-        # Sparkle icon
+        # Large sparkle (left side)
         spark_x = btn_rect.x + 30
         spark_y = btn_rect.y + 28
-        self._draw_sparkle(screen, spark_x, spark_y, 8, WHITE)
+        self._draw_sparkle(screen, spark_x, spark_y, 10, WHITE)
+        
+        # Small sparkle (top right of large one)
+        self._draw_sparkle(screen, spark_x + 10, spark_y - 9, 5, WHITE)
         
         btn_text = self.fonts['body'].render("Generate Meal Plan", True, WHITE)
         text_x = btn_rect.x + (btn_width - btn_text.get_width()) // 2 + 10
@@ -205,9 +210,9 @@ class MealPrepView:
         # Calculate card dimensions with proper margins
         day_label_width = 100
         right_margin = 15
-        cards_area_width = WIDTH - day_label_width - 40 - right_margin  # 20px left padding, right_margin on right
+        cards_area_width = WIDTH - day_label_width - 40 - right_margin # 20px left padding, right_margin on right
         card_gap = 12
-        card_width = (cards_area_width - (card_gap * 2)) // 3  # 2 gaps between 3 cards
+        card_width = (cards_area_width - (card_gap * 2)) // 3 # 2 gaps between 3 cards
         cards_start_x = 20 + day_label_width
         
         # Draw column headers for meal types - plain text, not pills
@@ -219,7 +224,7 @@ class MealPrepView:
             text_x = card_x + (card_width - header_text.get_width()) // 2
             screen.blit(header_text, (text_x, header_y))
         
-        visible_height = content_bottom - y_start - 35  # Account for header
+        visible_height = content_bottom - y_start - 35 # Account for header
         
         # Calculate content height
         day_block_height = 95

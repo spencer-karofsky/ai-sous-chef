@@ -288,7 +288,7 @@ class BedrockManager(BedrockInterface):
     def generate_recipe(
         self,
         user_input: str,
-        model: str = 'claude-sonnet-3-5'
+        model: str = 'claude-haiku-3'
     ) -> Optional[Dict]:
         """
         Generate a new recipe from scratch based on user request
