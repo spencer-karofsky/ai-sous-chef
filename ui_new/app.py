@@ -487,22 +487,8 @@ class RecipeApp:
         # Favorite actions
         elif action == 'toggle_favorite':
             self._toggle_favorite()
-        elif action.startswith('view_saved_'):
-            recipe_id = action.replace('view_saved_', '')
-            self._view_saved_recipe(recipe_id)
-        elif action.startswith('view_'):
-            fav_id = action.replace('view_', '')
-            self._view_favorite(fav_id)
-        elif action == 'generate_list':
-            self._generate_grocery_list()
-
-        elif action == 'generate_meal_plan':
-            self._generate_meal_plan()
-
-        elif action == 'focus_meal_prompt':
-            self.active_input = 'meal_prompt'
-            self.keyboard.visible = True
-
+        
+        # Meal plan actions - MUST come before generic view_
         elif action.startswith('view_meal_'):
             parts = action.replace('view_meal_', '').split('_')
             if len(parts) == 2:
@@ -514,6 +500,26 @@ class RecipeApp:
             if len(parts) == 2:
                 day_name, meal_type = parts
                 self._hydrate_and_view_meal(day_name, meal_type)
+        
+        # Saved recipes - MUST come before generic view_
+        elif action.startswith('view_saved_'):
+            recipe_id = action.replace('view_saved_', '')
+            self._view_saved_recipe(recipe_id)
+        
+        # Generic view for favorites - MUST be LAST of all view_ checks
+        elif action.startswith('view_'):
+            fav_id = action.replace('view_', '')
+            self._view_favorite(fav_id)
+        
+        elif action == 'generate_list':
+            self._generate_grocery_list()
+
+        elif action == 'generate_meal_plan':
+            self._generate_meal_plan()
+
+        elif action == 'focus_meal_prompt':
+            self.active_input = 'meal_prompt'
+            self.keyboard.visible = True
     
     def _hydrate_and_view_meal(self, day_name: str, meal_type: str):
         """Hydrate a recipe and then view it."""
