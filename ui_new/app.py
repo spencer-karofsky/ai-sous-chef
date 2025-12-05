@@ -757,6 +757,10 @@ class RecipeApp:
                                     prefs = self.views['Preferences']
                                     new_scroll = self.touch_start_scroll + delta
                                     prefs.scroll_offset = max(0, min(prefs.max_scroll, new_scroll))
+                                elif self.current_view == 'GroceryList':  # Add this
+                                    grocery = self.views['GroceryList']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    grocery.scroll_offset = max(0, min(grocery.max_scroll, new_scroll))
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -777,7 +781,9 @@ class RecipeApp:
                     self.touch_start_x = touch_x
                     self.is_dragging = False
                     
-                    if self.current_view == 'Settings':
+                    if self.current_view == 'GroceryList':
+                        self.touch_start_scroll = self.views['GroceryList'].scroll_offset
+                    elif self.current_view == 'Settings':
                         self.touch_start_scroll = self.views['Settings'].scroll_offset
                         self._check_slider_start((touch_x, touch_y))
                     elif self.current_view == 'Recipe':
@@ -822,6 +828,10 @@ class RecipeApp:
                                     prefs = self.views['Preferences']
                                     new_scroll = self.touch_start_scroll + delta
                                     prefs.scroll_offset = max(0, min(prefs.max_scroll, new_scroll))
+                                elif self.current_view == 'GroceryList':  # Add this
+                                    grocery = self.views['GroceryList']
+                                    new_scroll = self.touch_start_scroll + delta
+                                    grocery.scroll_offset = max(0, min(grocery.max_scroll, new_scroll))
 
                 elif event.type == pygame.FINGERUP:
                     touch_x = int(event.x * WIDTH)
