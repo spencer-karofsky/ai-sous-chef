@@ -109,6 +109,13 @@ class RecipeApp:
             self.meal_plan_manager
         )
 
+        # Pass managers to HomeView
+        self.views['Home'].set_managers(
+            meal_plan_manager=self.meal_plan_manager,
+            favorites_manager=self.favorites_manager,
+            saved_recipes_manager=self.saved_recipes_manager
+        )
+
         # State
         self.current_view = 'Home'
         self.previous_view = None
@@ -432,6 +439,17 @@ class RecipeApp:
             self.create_text = action.replace('suggestion_', '')
             self.active_input = 'create'
             self.keyboard.visible = True
+
+        elif action.startswith('home_meal_'):
+            parts = action.replace('home_meal_', '').split('_')
+            if len(parts) == 2:
+                day_name, meal_type = parts
+                meal = self.meal_plan_manager.get_meal(day_name, meal_type)
+                if meal:
+                    if meal.get('hydrated'):
+                        self._view_meal_plan_recipe(day_name, meal_type)
+                    else:
+                        self._hydrate_and_view_meal(day_name, meal_type)
         
         # Recipe actions
         elif action == 'back':
