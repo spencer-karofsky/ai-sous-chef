@@ -63,18 +63,18 @@ class RecipeView:
     def _draw_header(self, screen, recipe):
         """Minimal header with back, title, and favorite."""
         # Back button - sage light with teal chevron
-        back_rect = pygame.Rect(30, 22, 85, 36)
-        pygame.draw.rect(screen, SAGE_LIGHT, back_rect, border_radius=18)
-        pygame.draw.rect(screen, SAGE, back_rect, border_radius=18, width=1)
+        back_rect = pygame.Rect(30, 20, 95, 40)
+        pygame.draw.rect(screen, SAGE_LIGHT, back_rect, border_radius=20)
+        pygame.draw.rect(screen, SAGE, back_rect, border_radius=20, width=1)
         
         # Teal chevron
-        ax = back_rect.x + 20
-        ay = back_rect.y + 18
-        pygame.draw.line(screen, TEAL, (ax + 6, ay - 5), (ax, ay), 2)
-        pygame.draw.line(screen, TEAL, (ax, ay), (ax + 6, ay + 5), 2)
+        ax = back_rect.x + 22
+        ay = back_rect.y + 20
+        pygame.draw.line(screen, TEAL, (ax + 8, ay - 6), (ax, ay), 2)
+        pygame.draw.line(screen, TEAL, (ax, ay), (ax + 8, ay + 6), 2)
         
         back_text = self.fonts['small'].render("Back", True, SOFT_BLACK)
-        screen.blit(back_text, (ax + 14, ay - 8))
+        screen.blit(back_text, (ax + 18, ay - 9))
         
         # Heart button
         heart_rect = pygame.Rect(WIDTH - 58, 22, 36, 36)
@@ -429,7 +429,7 @@ class RecipeView:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
         
         # Back button
-        if 30 <= x <= 115 and 22 <= y <= 58:
+        if 30 <= x <= 125 and 20 <= y <= 60:
             return 'back'
         
         # Heart button
