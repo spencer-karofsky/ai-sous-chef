@@ -1,13 +1,10 @@
 """
 ui_new/constants.py
-
 Description:
     * Shared constants for AI Sous Chef UI (Clean minimal design)
-
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
-
 # Colors - Clean minimal palette
 WHITE = (255, 255, 255)
 OFF_WHITE = (250, 250, 250)
@@ -31,7 +28,7 @@ HEIGHT = 720
 # Navigation bar
 NAV_HEIGHT = 85
 NAV_ICON_SIZE = 28
-NAV_ITEMS = ['Home', 'Search', 'Favorites', 'Create', 'Settings']
+NAV_ITEMS = ['Home', 'Search', 'My Kitchen', 'Create', 'Settings']  # Changed Favorites -> My Kitchen
 
 # Keyboard layout
 KEYBOARD_ROWS = [

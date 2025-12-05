@@ -19,11 +19,15 @@ from infra.config import AWS_RESOURCES
 
 from ui_new.constants import *
 from ui_new.components import NavBar, TouchKeyboard
+from ui_new.saved_recipes_manager import SavedRecipesManager
+from ui_new.meal_plan_manager import MealPlanManager
+from ui_new.grocery_list_manager import GroceryListManager
 from ui_new.views import (
     HomeView, SearchView, CreateView, 
     RecipeView, FavoritesView, SettingsView, WiFiView, PreferencesView,
-    SkillLevelView
+    SkillLevelView, MyKitchenView, SavedRecipesView, MealPrepView, GroceryListView
 )
+from infra.managers.bedrock_manager import BedrockManager
 from ui_new.config import Config
 from ui_new.favorites_manager import FavoritesManager
 
@@ -34,6 +38,9 @@ class RecipeApp:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         pygame.display.set_caption("AI Sous Chef")
         self.clock = pygame.time.Clock()
+
+        self.bedrock = BedrockManager(boto3.client('bedrock-runtime', region_name='us-east-1'))
+        self.prompter = RecipePrompter(boto3.client('bedrock-runtime', region_name='us-east-1'))
 
         # Fonts - find a good sans-serif font
         font_name = None
@@ -66,13 +73,20 @@ class RecipeApp:
 
         # Favorites manager
         self.favorites_manager = FavoritesManager()
+        self.saved_recipes_manager = SavedRecipesManager()
+        self.meal_plan_manager = MealPlanManager(self.bedrock)
+        self.grocery_list_manager = GroceryListManager(self.bedrock)
 
         # Views
         self.views = {
             'Home': HomeView(self.fonts),
             'Search': SearchView(self.fonts),
             'Create': CreateView(self.fonts),
+            'My Kitchen': MyKitchenView(self.fonts),
             'Favorites': FavoritesView(self.fonts),
+            'SavedRecipes': SavedRecipesView(self.fonts),
+            'MealPrep': MealPrepView(self.fonts),
+            'GroceryList': GroceryListView(self.fonts),
             'Settings': SettingsView(self.fonts, self.config),
             'Recipe': RecipeView(self.fonts),
             'WiFi': WiFiView(self.fonts),
@@ -83,6 +97,17 @@ class RecipeApp:
         # Pass manager to views that need it
         self.views['Recipe'].set_manager(self.favorites_manager)
         self.views['Favorites'].set_manager(self.favorites_manager)
+        self.views['My Kitchen'].set_managers(self.favorites_manager, self.saved_recipes_manager)
+        self.views['SavedRecipes'].set_manager(self.saved_recipes_manager)
+        self.views['MealPrep'].set_managers(
+            self.meal_plan_manager, 
+            self.bedrock,
+            self.config
+        )
+        self.views['GroceryList'].set_managers(
+            self.grocery_list_manager,
+            self.meal_plan_manager
+        )
 
         # State
         self.current_view = 'Home'
@@ -246,6 +271,9 @@ class RecipeApp:
             try:
                 recipe = self.prompter.generate_recipe(self.create_text)
                 if recipe:
+                    # Auto-save the generated recipe
+                    self.saved_recipes_manager.add(recipe)
+                    
                     self.previous_view = self.current_view
                     self.current_view = 'Recipe'
                     self.scroll_offset = 0
@@ -290,6 +318,8 @@ class RecipeApp:
                 self.views['WiFi'].handle_keyboard_input(key)
             elif self.active_input == 'custom_preference':
                 self.views['Preferences'].handle_keyboard_input(key)
+            elif self.active_input == 'meal_prompt':
+                self.views['MealPrep'].handle_keyboard_input(key)
             else:
                 self._set_active_text(self._get_active_text()[:-1])
         elif key == 'GO':
@@ -304,6 +334,10 @@ class RecipeApp:
                 self.views['WiFi'].handle_keyboard_input(key)
             elif self.active_input == 'custom_preference':
                 self.views['Preferences'].handle_keyboard_input(key)
+            elif self.active_input == 'meal_prompt':
+                result = self.views['MealPrep'].handle_keyboard_input(key)
+                if result == 'generate_meal_plan':
+                    self._generate_meal_plan()
         elif key == 'HIDE':
             self.keyboard.visible = False
         else:
@@ -311,6 +345,8 @@ class RecipeApp:
                 self.views['WiFi'].handle_keyboard_input(key)
             elif self.active_input == 'custom_preference':
                 self.views['Preferences'].handle_keyboard_input(key)
+            elif self.active_input == 'meal_prompt':
+                self.views['MealPrep'].handle_keyboard_input(key)
             else:
                 self._set_active_text(self._get_active_text() + key)
 
@@ -340,8 +376,25 @@ class RecipeApp:
                 self.previous_view = self.current_view
                 self.current_view = 'SkillLevel'
                 return
+            elif view_name == 'favorites':
+                self.previous_view = self.current_view
+                self.current_view = 'Favorites'
+                return
+            elif view_name == 'saved_recipes':
+                self.previous_view = self.current_view
+                self.current_view = 'SavedRecipes'
+                return
+            elif view_name == 'meal_prep':
+                self.previous_view = self.current_view
+                self.current_view = 'MealPrep'
+                return
+            elif view_name == 'grocery_list':
+                self.previous_view = self.current_view
+                self.current_view = 'GroceryList'
+                return
             
-            view_name = view_name.capitalize()
+            # Standard navigation
+            view_name = view_name.replace('_', ' ').title()
             if view_name in self.views:
                 self.current_view = view_name
                 self.navbar.active = view_name
@@ -382,7 +435,12 @@ class RecipeApp:
         
         # Recipe actions
         elif action == 'back':
-            if self.current_view == 'WiFi':
+            if self.current_view in ('Favorites', 'SavedRecipes', 'MealPrep', 'GroceryList'):
+                self.current_view = 'My Kitchen'
+                self.navbar.active = 'My Kitchen'
+                self.keyboard.visible = False
+                self.scroll_offset = 0
+            elif self.current_view == 'WiFi':
                 self.current_view = 'Settings'
                 self.navbar.active = 'Settings'
                 self.keyboard.visible = False
@@ -404,6 +462,7 @@ class RecipeApp:
                 self.modify_status = ""
                 self.keyboard.visible = False
                 self.prompter.clear_conversation()
+
         elif action == 'modify':
             self.modify_recipe()
         
@@ -413,6 +472,100 @@ class RecipeApp:
         elif action.startswith('view_'):
             fav_id = action.replace('view_', '')
             self._view_favorite(fav_id)
+
+        elif action.startswith('view_saved_'):
+            recipe_id = action.replace('view_saved_', '')
+            self._view_saved_recipe(recipe_id)
+
+        elif action == 'generate_list':
+            self._generate_grocery_list()
+
+        elif action == 'generate_meal_plan':
+            self._generate_meal_plan()
+
+        elif action == 'focus_meal_prompt':
+            self.active_input = 'meal_prompt'
+            self.keyboard.visible = True
+
+    def _view_saved_recipe(self, recipe_id):
+        """Load and view a saved recipe."""
+        recipe_data = self.saved_recipes_manager.get_by_id(recipe_id)
+        if not recipe_data:
+            return
+        
+        self.prompter.current_recipe = recipe_data
+        self.current_recipe_source = 'saved'
+        self.current_recipe_s3_key = None
+        self.previous_view = 'SavedRecipes'
+        self.current_view = 'Recipe'
+        self.scroll_offset = 0
+
+    def _generate_grocery_list(self):
+        """Generate grocery list from meal plan."""
+        self.loading = True
+        
+        def do_generate():
+            try:
+                list_id = self.views['GroceryList'].generate_list()
+                if list_id:
+                    print(f"Generated grocery list: {list_id}")
+            except Exception as e:
+                print(f"Error generating grocery list: {e}")
+            finally:
+                self.loading = False
+        
+        import threading
+        threading.Thread(target=do_generate, daemon=True).start()
+    
+    def _generate_meal_plan(self):
+        """Generate AI meal plan based on user prompt."""
+        meal_view = self.views['MealPrep']
+        prompt = meal_view.prompt_text
+        
+        if not prompt.strip():
+            return
+        
+        meal_view.generating = True
+        meal_view.generation_status = "Creating your personalized meal plan..."
+        meal_view.show_generate_modal = False
+        self.keyboard.visible = False
+        
+        def do_generate():
+            try:
+                # Get user preferences from config
+                dietary = self.config.get('dietary', []) if self.config else []
+                exclusions = self.config.get('exclusions', []) if self.config else []
+                skill = self.config.get('skill_level', 'Beginner') if self.config else 'Beginner'
+                
+                meal_view.generation_status = "Generating 21 recipes for your week..."
+                
+                success = self.meal_plan_manager.generate_meal_plan(
+                    user_prompt=prompt,
+                    dietary_prefs=dietary,
+                    exclusions=exclusions,
+                    skill_level=skill
+                )
+                
+                if success:
+                    meal_view.generation_status = "Meal plan created!"
+                    # Auto-generate grocery list
+                    meal_view.generation_status = "Generating grocery list..."
+                    self.grocery_list_manager.generate_from_meals(
+                        self.meal_plan_manager.get_all_meals(),
+                        f"Week of {self.meal_plan_manager.get_week_start()}"
+                    )
+                else:
+                    meal_view.generation_status = "Failed to generate. Try again."
+                    
+            except Exception as e:
+                print(f"Error generating meal plan: {e}")
+                meal_view.generation_status = "Error occurred. Please try again."
+            finally:
+                meal_view.generating = False
+                meal_view.prompt_text = ""
+        
+        import threading
+        threading.Thread(target=do_generate, daemon=True).start()
     
     def _toggle_favorite(self):
         recipe = self.prompter.current_recipe
@@ -506,6 +659,19 @@ class RecipeApp:
 
         loading_text = self.fonts['body'].render("Loading...", True, CHARCOAL)
         self.screen.blit(loading_text, (cx - loading_text.get_width() // 2, cy + 50))
+    
+    def _view_saved_recipe(self, recipe_id):
+        """Load and view a saved recipe."""
+        recipe_data = self.saved_recipes_manager.get_by_id(recipe_id)
+        if not recipe_data:
+            return
+        
+        self.prompter.current_recipe = recipe_data
+        self.current_recipe_source = 'saved'
+        self.current_recipe_s3_key = None
+        self.previous_view = 'SavedRecipes'
+        self.current_view = 'Recipe'
+        self.scroll_offset = 0
 
     def run(self):
         running = True
@@ -663,7 +829,8 @@ class RecipeApp:
                     new_max = view.draw(self.screen, state, self.keyboard.visible)
                     if new_max is not None:
                         self.max_scroll = new_max
-                elif self.current_view in ('Search', 'Create', 'Settings', 'WiFi', 'Preferences', 'SkillLevel'):
+                elif self.current_view in ('Search', 'Create', 'Settings', 'WiFi', 'Preferences', 
+                                        'SkillLevel', 'Favorites', 'SavedRecipes', 'MealPrep', 'GroceryList'):
                     view.draw(self.screen, state, self.keyboard.visible)
                 else:
                     view.draw(self.screen, state)
@@ -690,6 +857,12 @@ class RecipeApp:
             self.views['WiFi'].handle_scroll(delta)
         elif self.current_view == 'Preferences':
             self.views['Preferences'].handle_scroll(delta)
+        elif self.current_view == 'SavedRecipes':
+            self.views['SavedRecipes'].handle_scroll(delta)
+        elif self.current_view == 'MealPrep':
+            self.views['MealPrep'].handle_scroll(delta)
+        elif self.current_view == 'GroceryList':
+            self.views['GroceryList'].handle_scroll(delta)
         elif self.current_view == 'Recipe':
             self.scroll_offset = max(0, min(self.max_scroll, self.scroll_offset + delta))
 
