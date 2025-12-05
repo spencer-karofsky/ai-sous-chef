@@ -69,60 +69,69 @@ def draw_heart_icon(surface, x, y, size, color, filled=False):
 
 
 def draw_my_kitchen_icon(surface, x, y, size, color, filled=False):
-    """Draw a chef's hat icon for My Kitchen - simple polygon approach."""
-    # Scale everything to size
+    """Draw simple parallel fork and spoon icon."""
     s = size / 28.0
-    
-    # Define the hat shape as points (based on 28x28 grid)
-    # Starting from bottom-left, going clockwise
-    hat_outline = [
-        # Bottom band - left side
-        (6, 26),    # Bottom left
-        (6, 20),    # Band top left
-        # Left side going up
-        (6, 16),    # Left side
-        # Top cloud bumps (left bump)
-        (4, 14),
-        (3, 11),
-        (4, 8),
-        (6, 6),
-        # Center bump (taller)
-        (9, 4),
-        (12, 2),
-        (14, 2),
-        (16, 2),
-        (19, 4),
-        # Right bump
-        (22, 6),
-        (24, 8),
-        (25, 11),
-        (24, 14),
-        # Right side going down
-        (22, 16),
-        (22, 20),   # Band top right
-        (22, 26),   # Bottom right
-    ]
-    
-    # Scale and offset points
-    points = [(x + int(px * s), y + int(py * s)) for px, py in hat_outline]
-    
     thickness = 2
     
+    # Spoon on left
+    spoon_x = x + int(7 * s)
+    
+    # Spoon bowl (oval at top)
+    bowl_cy = y + int(7 * s)
+    bowl_w = int(8 * s)
+    bowl_h = int(11 * s)
+    bowl_rect = (spoon_x - bowl_w // 2, bowl_cy - bowl_h // 2, bowl_w, bowl_h)
+    
+    # Spoon handle
+    handle_top = bowl_cy + bowl_h // 2 - int(2 * s)
+    handle_bottom = y + size - int(3 * s)
+    
     if filled:
-        pygame.draw.polygon(surface, color, points)
+        pygame.draw.ellipse(surface, color, bowl_rect)
+        pygame.draw.line(surface, color, (spoon_x, handle_top), (spoon_x, handle_bottom), int(4 * s))
     else:
-        pygame.draw.polygon(surface, color, points, thickness)
-        
-        # Draw the band separator line
-        band_y = y + int(20 * s)
-        pygame.draw.line(surface, color, (x + int(6 * s), band_y), (x + int(22 * s), band_y), thickness)
-        
-        # Draw vertical lines in band
-        band_top = y + int(20 * s)
-        band_bottom = y + int(26 * s)
-        for i in range(1, 4):
-            lx = x + int((6 + i * 4) * s)
-            pygame.draw.line(surface, color, (lx, band_top + 2), (lx, band_bottom - 2), thickness)
+        pygame.draw.ellipse(surface, color, bowl_rect, thickness)
+        pygame.draw.line(surface, color, (spoon_x, handle_top), (spoon_x, handle_bottom), thickness)
+    
+    # Fork on right
+    fork_x = x + int(21 * s)
+    fork_top = y + int(3 * s)
+    tine_height = int(6 * s)
+    tine_gap = int(3 * s)
+    
+    # Three tines
+    tine_positions = [fork_x - tine_gap, fork_x, fork_x + tine_gap]
+    
+    for tx in tine_positions:
+        if filled:
+            pygame.draw.line(surface, color, (tx, fork_top), (tx, fork_top + tine_height), thickness + 1)
+        else:
+            pygame.draw.line(surface, color, (tx, fork_top), (tx, fork_top + tine_height), thickness)
+    
+    # Fork neck (connects tines to handle, tapers down)
+    neck_top = fork_top + tine_height
+    neck_bottom = neck_top + int(4 * s)
+    
+    # Draw neck as trapezoid
+    neck_points = [
+        (fork_x - tine_gap, neck_top),
+        (fork_x + tine_gap, neck_top),
+        (fork_x + int(1.5 * s), neck_bottom),
+        (fork_x - int(1.5 * s), neck_bottom),
+    ]
+    
+    if filled:
+        pygame.draw.polygon(surface, color, neck_points)
+    else:
+        pygame.draw.lines(surface, color, False, [(fork_x - tine_gap, neck_top), (fork_x - int(1.5 * s), neck_bottom)], thickness)
+        pygame.draw.lines(surface, color, False, [(fork_x + tine_gap, neck_top), (fork_x + int(1.5 * s), neck_bottom)], thickness)
+    
+    # Fork handle
+    fork_handle_bottom = y + size - int(3 * s)
+    if filled:
+        pygame.draw.line(surface, color, (fork_x, neck_bottom), (fork_x, fork_handle_bottom), int(4 * s))
+    else:
+        pygame.draw.line(surface, color, (fork_x, neck_bottom), (fork_x, fork_handle_bottom), thickness)
 
 
 def draw_create_icon(surface, x, y, size, color, filled=False):
