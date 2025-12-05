@@ -88,10 +88,9 @@ def draw_my_kitchen_icon(surface, x, y, size, color, filled=False):
     
     if filled:
         pygame.draw.ellipse(surface, color, bowl_rect)
-        pygame.draw.line(surface, color, (spoon_x, handle_top), (spoon_x, handle_bottom), int(4 * s))
     else:
         pygame.draw.ellipse(surface, color, bowl_rect, thickness)
-        pygame.draw.line(surface, color, (spoon_x, handle_top), (spoon_x, handle_bottom), thickness)
+    pygame.draw.line(surface, color, (spoon_x, handle_top), (spoon_x, handle_bottom), thickness)
     
     # Fork on right
     fork_x = x + int(21 * s)
@@ -103,35 +102,22 @@ def draw_my_kitchen_icon(surface, x, y, size, color, filled=False):
     tine_positions = [fork_x - tine_gap, fork_x, fork_x + tine_gap]
     
     for tx in tine_positions:
-        if filled:
-            pygame.draw.line(surface, color, (tx, fork_top), (tx, fork_top + tine_height), thickness + 1)
-        else:
-            pygame.draw.line(surface, color, (tx, fork_top), (tx, fork_top + tine_height), thickness)
+        pygame.draw.line(surface, color, (tx, fork_top), (tx, fork_top + tine_height), thickness)
     
     # Fork neck (connects tines to handle, tapers down)
     neck_top = fork_top + tine_height
     neck_bottom = neck_top + int(4 * s)
     
-    # Draw neck as trapezoid
-    neck_points = [
-        (fork_x - tine_gap, neck_top),
-        (fork_x + tine_gap, neck_top),
-        (fork_x + int(1.5 * s), neck_bottom),
-        (fork_x - int(1.5 * s), neck_bottom),
-    ]
+    # Draw neck as lines on both sides
+    pygame.draw.line(surface, color, (fork_x - tine_gap, neck_top), (fork_x - int(1 * s), neck_bottom), thickness)
+    pygame.draw.line(surface, color, (fork_x + tine_gap, neck_top), (fork_x + int(1 * s), neck_bottom), thickness)
     
-    if filled:
-        pygame.draw.polygon(surface, color, neck_points)
-    else:
-        pygame.draw.lines(surface, color, False, [(fork_x - tine_gap, neck_top), (fork_x - int(1.5 * s), neck_bottom)], thickness)
-        pygame.draw.lines(surface, color, False, [(fork_x + tine_gap, neck_top), (fork_x + int(1.5 * s), neck_bottom)], thickness)
+    # Connect tines at top of neck
+    pygame.draw.line(surface, color, (fork_x - tine_gap, neck_top), (fork_x + tine_gap, neck_top), thickness)
     
     # Fork handle
     fork_handle_bottom = y + size - int(3 * s)
-    if filled:
-        pygame.draw.line(surface, color, (fork_x, neck_bottom), (fork_x, fork_handle_bottom), int(4 * s))
-    else:
-        pygame.draw.line(surface, color, (fork_x, neck_bottom), (fork_x, fork_handle_bottom), thickness)
+    pygame.draw.line(surface, color, (fork_x, neck_bottom), (fork_x, fork_handle_bottom), thickness)
 
 
 def draw_create_icon(surface, x, y, size, color, filled=False):
