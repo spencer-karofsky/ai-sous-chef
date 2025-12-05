@@ -201,9 +201,10 @@ class HomeView:
         
         self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65, WHITE)
         
-        # Create card
+        # Create card - deep navy blue
         create_rect = pygame.Rect(60 + card_width, y, card_width, card_height)
-        pygame.draw.rect(screen, SOFT_BLACK, create_rect, border_radius=16)
+        create_bg = (30, 42, 120)  # #1e2a78
+        pygame.draw.rect(screen, create_bg, create_rect, border_radius=16)
         
         create_title = self.fonts['header'].render("Create", True, WHITE)
         screen.blit(create_title, (create_rect.x + 25, create_rect.y + 22))
@@ -221,7 +222,9 @@ class HomeView:
         box_height = 170
         
         box_rect = pygame.Rect(40, y, WIDTH - 80, box_height)
-        pygame.draw.rect(screen, LIGHT_GRAY, box_rect, border_radius=16)
+        # Light sage at ~25% opacity blended with white
+        sage_light = (227, 231, 226)  # Sage (142,157,139) at ~25% over white
+        pygame.draw.rect(screen, sage_light, box_rect, border_radius=16)
         
         # Title row
         today = datetime.now().strftime("%A")
