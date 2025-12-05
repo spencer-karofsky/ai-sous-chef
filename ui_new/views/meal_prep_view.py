@@ -276,12 +276,12 @@ class MealPrepView:
         
         pygame.draw.rect(screen, WHITE, (modal_x, modal_y, modal_width, modal_height), border_radius=16)
         
-        # Close button
-        close_x = modal_x + modal_width - 45
-        close_y = modal_y + 25
-        pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 15)
-        pygame.draw.line(screen, CHARCOAL, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
-        pygame.draw.line(screen, CHARCOAL, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
+        # Close button (top right)
+        close_x = modal_x + modal_width - 35
+        close_y = modal_y + 35
+        pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 18)
+        pygame.draw.line(screen, CHARCOAL, (close_x - 6, close_y - 6), (close_x + 6, close_y + 6), 2)
+        pygame.draw.line(screen, CHARCOAL, (close_x + 6, close_y - 6), (close_x - 6, close_y + 6), 2)
         
         if not self.selected_meal:
             return
@@ -294,8 +294,14 @@ class MealPrepView:
         title_text = self.fonts['body'].render(title, True, DARK_GRAY)
         screen.blit(title_text, (modal_x + 25, modal_y + 20))
         
-        # Recipe name
-        name_text = self.fonts['header'].render(recipe_name[:35] + ('...' if len(recipe_name) > 35 else ''), True, SOFT_BLACK)
+        # Recipe name - truncate to fit
+        max_name_width = modal_width - 100  # Leave room for close button
+        if self.fonts['header'].size(recipe_name)[0] > max_name_width:
+            while self.fonts['header'].size(recipe_name + '...')[0] > max_name_width and len(recipe_name) > 5:
+                recipe_name = recipe_name[:-1]
+            recipe_name += '...'
+        
+        name_text = self.fonts['header'].render(recipe_name, True, SOFT_BLACK)
         screen.blit(name_text, (modal_x + 25, modal_y + 50))
         
         if is_hydrated:
@@ -529,12 +535,14 @@ class MealPrepView:
         modal_x = (WIDTH - modal_width) // 2
         modal_y = (HEIGHT - modal_height) // 2
         
-        # Close button
-        close_x = modal_x + modal_width - 45
-        close_y = modal_y + 25
-        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 225:
+        # Close button - match the draw position
+        close_x = modal_x + modal_width - 35
+        close_y = modal_y + 35
+        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 324:  # 18^2
             self.show_recipe_modal = False
             self.selected_meal = None
+            self.selected_day = None
+            self.selected_meal_type = None
             return 'close_recipe_modal'
         
         # Action button (View or Generate)
@@ -542,24 +550,25 @@ class MealPrepView:
         if btn_rect.collidepoint(x, y):
             is_hydrated = self.selected_meal.get('hydrated', False) if self.selected_meal else False
             
+            day = self.selected_day
+            meal_type = self.selected_meal_type
+            
+            self.show_recipe_modal = False
+            self.selected_meal = None
+            self.selected_day = None
+            self.selected_meal_type = None
+            
             if is_hydrated:
-                # View full recipe
-                day = self.selected_day
-                meal_type = self.selected_meal_type
-                self.show_recipe_modal = False
-                self.selected_meal = None
                 return f'view_meal_{day}_{meal_type}'
             else:
-                # Generate recipe
-                day = self.selected_day
-                meal_type = self.selected_meal_type
-                self.show_recipe_modal = False
                 return f'hydrate_meal_{day}_{meal_type}'
         
         # Click outside modal to close
         if not (modal_x <= x <= modal_x + modal_width and modal_y <= y <= modal_y + modal_height):
             self.show_recipe_modal = False
             self.selected_meal = None
+            self.selected_day = None
+            self.selected_meal_type = None
             return 'close_recipe_modal'
         
         return None
