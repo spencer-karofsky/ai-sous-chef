@@ -77,16 +77,20 @@ class TouchKeyboard:
         
         # Calculate key dimensions to fill the space
         num_rows = len(KEYBOARD_ROWS) + 1  # +1 for special keys row
-        self.vertical_padding = 12
-        self.row_spacing = 8
+        self.vertical_padding = 10
+        self.horizontal_padding = 10
+        self.row_spacing = 6
+        self.key_margin = 5
         
-        # Calculate key height to fill available space
+        # Calculate key height to fill available vertical space
         available_height = self.actual_height - (self.vertical_padding * 2) - (self.row_spacing * (num_rows - 1))
         self.key_height = available_height // num_rows
         
-        # Key width scales with height for nice proportions
-        self.key_width = 62
-        self.key_margin = 6
+        # Calculate key width to fill available horizontal space
+        # Use the longest row (usually first row with 10 keys) to determine width
+        max_keys_in_row = max(len(row) for row in KEYBOARD_ROWS)
+        available_width = WIDTH - (self.horizontal_padding * 2) - (self.key_margin * (max_keys_in_row - 1))
+        self.key_width = available_width // max_keys_in_row
 
     def draw(self):
         if not self.visible:
@@ -101,6 +105,7 @@ class TouchKeyboard:
         current_time = pygame.time.get_ticks()
 
         for row in KEYBOARD_ROWS:
+            # Calculate width for this row to center it
             row_width = len(row) * (self.key_width + self.key_margin) - self.key_margin
             x = (WIDTH - row_width) // 2
 
@@ -131,19 +136,25 @@ class TouchKeyboard:
         self._draw_special_keys(y, current_time)
 
     def _draw_special_keys(self, y, current_time):
-        # Scale special key widths proportionally
-        total_width = WIDTH - 40  # 20px padding on each side
-        special_keys = [
-            ('Shift', int(total_width * 0.12)),
-            ('SPACE', int(total_width * 0.50)),
-            ('DELETE', int(total_width * 0.12)),
-            ('Go', int(total_width * 0.14)),
-            ('HIDE', int(total_width * 0.08)),
-        ]
+        # Special keys fill the full width
+        available_width = WIDTH - (self.horizontal_padding * 2)
         
-        x = (WIDTH - sum(w for _, w in special_keys) - self.key_margin * 4) // 2
+        # Proportions for special keys
+        proportions = [0.12, 0.46, 0.14, 0.16, 0.08]  # Shift, Space, Delete, Go, Hide
+        labels = ['Shift', 'SPACE', 'DELETE', 'Go', 'HIDE']
+        
+        # Calculate widths and account for margins
+        num_keys = len(labels)
+        total_margin = self.key_margin * (num_keys - 1)
+        keys_width = available_width - total_margin
+        widths = [int(keys_width * p) for p in proportions]
+        
+        # Adjust last key to fill any rounding gap
+        widths[-1] = available_width - sum(widths[:-1]) - total_margin
+        
+        x = self.horizontal_padding
 
-        for label, width in special_keys:
+        for i, (label, width) in enumerate(zip(labels, widths)):
             is_pressed = (self.pressed_key == label and
                         current_time - self.press_time < self.PRESS_DURATION)
 
@@ -254,18 +265,19 @@ class TouchKeyboard:
         return self._handle_special_keys(pos, key_y)
 
     def _handle_special_keys(self, pos, y):
-        total_width = WIDTH - 40
-        special_keys = [
-            ('SHIFT', int(total_width * 0.12)),
-            ('SPACE', int(total_width * 0.50)),
-            ('BACKSPACE', int(total_width * 0.12)),
-            ('GO', int(total_width * 0.14)),
-            ('HIDE', int(total_width * 0.08)),
-        ]
+        available_width = WIDTH - (self.horizontal_padding * 2)
+        proportions = [0.12, 0.46, 0.14, 0.16, 0.08]
+        actions = ['SHIFT', 'SPACE', 'BACKSPACE', 'GO', 'HIDE']
         
-        key_x = (WIDTH - sum(w for _, w in special_keys) - self.key_margin * 4) // 2
+        num_keys = len(actions)
+        total_margin = self.key_margin * (num_keys - 1)
+        keys_width = available_width - total_margin
+        widths = [int(keys_width * p) for p in proportions]
+        widths[-1] = available_width - sum(widths[:-1]) - total_margin
+        
+        key_x = self.horizontal_padding
 
-        for action, width in special_keys:
+        for action, width in zip(actions, widths):
             key_rect = pygame.Rect(key_x, y, width, self.key_height)
             if key_rect.collidepoint(pos):
                 self.pressed_key = action
