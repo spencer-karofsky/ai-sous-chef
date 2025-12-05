@@ -203,26 +203,31 @@ class SavedRecipesView:
         if not recipes:
             return None
         
-        # Recipe list
+        # Recipe list - check if tap is in the list area
         y_start = 90
+        if y < y_start:
+            return None
+        
         content_y = y - y_start + self.scroll_offset
         
         item_y = 10
         for recipe in recipes:
             card_rect_x = 30
             card_width = WIDTH - 60
+            card_height = 80
             
-            # Check delete button first
-            delete_x = card_rect_x + card_width - 50
-            delete_y = item_y + 25
-            
-            if delete_x <= x <= delete_x + 30 and delete_y <= content_y <= delete_y + 30:
-                self.confirm_delete_id = recipe['id']
-                return 'show_delete_confirm'
-            
-            # Check card tap (view recipe)
-            if card_rect_x <= x <= card_rect_x + card_width - 60 and item_y <= content_y <= item_y + 80:
-                return f"view_saved_{recipe['id']}"
+            # Check if tap is in this card's Y range
+            if item_y <= content_y <= item_y + card_height:
+                # Check delete button first (right side of card)
+                delete_x = card_rect_x + card_width - 50
+                
+                if delete_x <= x <= delete_x + 30:
+                    self.confirm_delete_id = recipe['id']
+                    return 'show_delete_confirm'
+                
+                # Check card tap (view recipe) - rest of card
+                if card_rect_x <= x <= delete_x:
+                    return f"view_saved_{recipe['id']}"
             
             item_y += 90
         
