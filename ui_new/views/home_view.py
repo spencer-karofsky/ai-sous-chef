@@ -86,28 +86,65 @@ class HomeView:
             self._draw_timer_modal(screen)
 
     def _draw_sleep_screen(self, screen):
-        """Draw minimal sleep screen with clock."""
+        """Draw minimal sleep screen with analog clock only."""
         screen.fill((15, 15, 20))  # Very dark background
         
         now = datetime.now()
-        time_str = now.strftime("%I:%M").lstrip("0")
-        date_str = now.strftime("%A, %B %d")
         
-        # Large centered clock
-        time_text = self.fonts['title'].render(time_str, True, (80, 80, 90))
-        time_x = (WIDTH - time_text.get_width()) // 2
-        time_y = HEIGHT // 2 - 40
-        screen.blit(time_text, (time_x, time_y))
+        # Clock center and size
+        cx, cy = WIDTH // 2, HEIGHT // 2
+        radius = 150
         
-        # Date below
-        date_text = self.fonts['body'].render(date_str, True, (60, 60, 70))
-        date_x = (WIDTH - date_text.get_width()) // 2
-        screen.blit(date_text, (time_x + time_text.get_width() + 15, time_y + 20))
+        # Clock face
+        pygame.draw.circle(screen, (30, 30, 35), (cx, cy), radius)
+        pygame.draw.circle(screen, (50, 50, 55), (cx, cy), radius, 3)
         
-        # Subtle hint
-        hint_text = self.fonts['caption'].render("Tap anywhere to wake", True, (40, 40, 50))
-        hint_x = (WIDTH - hint_text.get_width()) // 2
-        screen.blit(hint_text, (hint_x, HEIGHT - 60))
+        # Hour markers
+        for i in range(12):
+            angle = i * 30 - 90  # Start at 12 o'clock
+            rad = angle * 3.14159 / 180
+            
+            # Outer point
+            outer_x = cx + int((radius - 15) * pygame.math.Vector2(1, 0).rotate(angle).x)
+            outer_y = cy + int((radius - 15) * pygame.math.Vector2(1, 0).rotate(angle).y)
+            
+            # Inner point
+            inner_len = 25 if i % 3 == 0 else 12  # Longer marks at 12, 3, 6, 9
+            inner_x = cx + int((radius - 15 - inner_len) * pygame.math.Vector2(1, 0).rotate(angle).x)
+            inner_y = cy + int((radius - 15 - inner_len) * pygame.math.Vector2(1, 0).rotate(angle).y)
+            
+            thickness = 3 if i % 3 == 0 else 2
+            pygame.draw.line(screen, (80, 80, 90), (inner_x, inner_y), (outer_x, outer_y), thickness)
+        
+        # Calculate hand angles
+        hour = now.hour % 12
+        minute = now.minute
+        second = now.second
+        
+        # Hour hand
+        hour_angle = (hour + minute / 60) * 30 - 90
+        hour_length = radius * 0.5
+        hour_x = cx + int(hour_length * pygame.math.Vector2(1, 0).rotate(hour_angle).x)
+        hour_y = cy + int(hour_length * pygame.math.Vector2(1, 0).rotate(hour_angle).y)
+        pygame.draw.line(screen, (180, 180, 190), (cx, cy), (hour_x, hour_y), 6)
+        
+        # Minute hand
+        min_angle = minute * 6 - 90
+        min_length = radius * 0.75
+        min_x = cx + int(min_length * pygame.math.Vector2(1, 0).rotate(min_angle).x)
+        min_y = cy + int(min_length * pygame.math.Vector2(1, 0).rotate(min_angle).y)
+        pygame.draw.line(screen, (150, 150, 160), (cx, cy), (min_x, min_y), 4)
+        
+        # Second hand
+        sec_angle = second * 6 - 90
+        sec_length = radius * 0.85
+        sec_x = cx + int(sec_length * pygame.math.Vector2(1, 0).rotate(sec_angle).x)
+        sec_y = cy + int(sec_length * pygame.math.Vector2(1, 0).rotate(sec_angle).y)
+        pygame.draw.line(screen, (220, 80, 80), (cx, cy), (sec_x, sec_y), 2)
+        
+        # Center cap
+        pygame.draw.circle(screen, (100, 100, 110), (cx, cy), 8)
+        pygame.draw.circle(screen, (220, 80, 80), (cx, cy), 4)
     
     def set_managers(self, meal_plan_manager=None, favorites_manager=None, saved_recipes_manager=None):
         self.meal_plan_manager = meal_plan_manager

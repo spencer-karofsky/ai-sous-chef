@@ -912,7 +912,7 @@ class RecipeApp:
 
             state = self._get_state()
             view = self.views.get(self.current_view)
-            
+
             if view:
                 if self.current_view == 'Recipe':
                     new_max = view.draw(self.screen, state, self.keyboard.visible)
@@ -926,8 +926,12 @@ class RecipeApp:
 
             self.keyboard.draw()
 
+            # Hide navbar when Home is sleeping
             if not self.keyboard.visible:
-                self.navbar.draw()
+                if self.current_view == 'Home' and self.views['Home'].is_sleeping:
+                    pass  # Don't draw navbar
+                else:
+                    self.navbar.draw()
 
             if self.loading:
                 self._draw_loading()
