@@ -34,7 +34,7 @@ class HomeView:
         # Sleep state
         self.is_sleeping = False
         self.last_activity_ticks = pygame.time.get_ticks()
-        self.sleep_timeout = 30000 # 30 seconds
+        self.sleep_timeout = 60000 # 30 seconds
 
     def wake(self):
         """Wake from sleep."""
@@ -102,7 +102,6 @@ class HomeView:
         # Hour markers
         for i in range(12):
             angle = i * 30 - 90  # Start at 12 o'clock
-            rad = angle * 3.14159 / 180
             
             # Outer point
             outer_x = cx + int((radius - 15) * pygame.math.Vector2(1, 0).rotate(angle).x)
@@ -119,7 +118,6 @@ class HomeView:
         # Calculate hand angles
         hour = now.hour % 12
         minute = now.minute
-        second = now.second
         
         # Hour hand
         hour_angle = (hour + minute / 60) * 30 - 90
@@ -135,16 +133,8 @@ class HomeView:
         min_y = cy + int(min_length * pygame.math.Vector2(1, 0).rotate(min_angle).y)
         pygame.draw.line(screen, (150, 150, 160), (cx, cy), (min_x, min_y), 4)
         
-        # Second hand
-        sec_angle = second * 6 - 90
-        sec_length = radius * 0.85
-        sec_x = cx + int(sec_length * pygame.math.Vector2(1, 0).rotate(sec_angle).x)
-        sec_y = cy + int(sec_length * pygame.math.Vector2(1, 0).rotate(sec_angle).y)
-        pygame.draw.line(screen, (220, 80, 80), (cx, cy), (sec_x, sec_y), 2)
-        
         # Center cap
         pygame.draw.circle(screen, (100, 100, 110), (cx, cy), 8)
-        pygame.draw.circle(screen, (220, 80, 80), (cx, cy), 4)
     
     def set_managers(self, meal_plan_manager=None, favorites_manager=None, saved_recipes_manager=None):
         self.meal_plan_manager = meal_plan_manager
