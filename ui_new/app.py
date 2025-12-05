@@ -522,16 +522,29 @@ class RecipeApp:
         
         def do_hydrate():
             try:
-                recipe = self.meal_plan_manager.hydrate_recipe(day_name, meal_type)
-                if recipe:
+                recipe_data = self.meal_plan_manager.hydrate_recipe(day_name, meal_type)
+                if recipe_data:
+                    # Build recipe dict with all required fields
+                    recipe = {
+                        'name': recipe_data.get('name', 'Recipe'),
+                        'description': recipe_data.get('description', ''),
+                        'prep_time': recipe_data.get('prep_time', ''),
+                        'cook_time': recipe_data.get('cook_time', ''),
+                        'total_time': recipe_data.get('total_time', ''),
+                        'servings': recipe_data.get('servings', ''),
+                        'ingredients': recipe_data.get('ingredients', []),
+                        'instructions': recipe_data.get('instructions', []),
+                        'nutrition': recipe_data.get('nutrition', {}),
+                    }
+                    
                     self.prompter.current_recipe = recipe
                     self.current_recipe_source = 'meal_plan'
                     self.current_recipe_s3_key = None
                     self.previous_view = 'MealPrep'
                     self.current_view = 'Recipe'
                     self.scroll_offset = 0
-                    # Clear modal state
-                    meal_view.selected_meal = None
+                # Clear modal state
+                meal_view.selected_meal = None
             except Exception as e:
                 print(f"Error hydrating recipe: {e}")
             finally:
@@ -540,25 +553,33 @@ class RecipeApp:
         threading.Thread(target=do_hydrate, daemon=True).start()
 
     def _view_meal_plan_recipe(self, day_name: str, meal_type: str):
-        """Hydrate and view a recipe from the meal plan."""
-        self.loading = True
+        """View a hydrated recipe from the meal plan."""
+        meal = self.meal_plan_manager.get_meal(day_name, meal_type)
+        if not meal:
+            return
         
-        def do_hydrate():
-            try:
-                recipe = self.meal_plan_manager.hydrate_recipe(day_name, meal_type)
-                if recipe:
-                    self.prompter.current_recipe = recipe
-                    self.current_recipe_source = 'meal_plan'
-                    self.current_recipe_s3_key = None
-                    self.previous_view = 'MealPrep'
-                    self.current_view = 'Recipe'
-                    self.scroll_offset = 0
-            except Exception as e:
-                print(f"Error hydrating recipe: {e}")
-            finally:
-                self.loading = False
+        # Get the recipe data - either from recipe_data or the meal itself
+        recipe_data = meal.get('recipe_data') or meal
         
-        threading.Thread(target=do_hydrate, daemon=True).start()
+        # Ensure we have the required fields
+        recipe = {
+            'name': recipe_data.get('name', meal.get('name', 'Recipe')),
+            'description': recipe_data.get('description', ''),
+            'prep_time': recipe_data.get('prep_time', ''),
+            'cook_time': recipe_data.get('cook_time', ''),
+            'total_time': recipe_data.get('total_time', meal.get('total_time', '')),
+            'servings': recipe_data.get('servings', meal.get('servings', '')),
+            'ingredients': recipe_data.get('ingredients', meal.get('ingredients', [])),
+            'instructions': recipe_data.get('instructions', []),
+            'nutrition': recipe_data.get('nutrition', {}),
+        }
+        
+        self.prompter.current_recipe = recipe
+        self.current_recipe_source = 'meal_plan'
+        self.current_recipe_s3_key = None
+        self.previous_view = 'MealPrep'
+        self.current_view = 'Recipe'
+        self.scroll_offset = 0
 
     def _view_saved_recipe(self, recipe_id):
         """Load and view a saved recipe."""
