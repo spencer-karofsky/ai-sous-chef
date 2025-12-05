@@ -319,7 +319,11 @@ class WiFiView:
         self.show_password_modal = False
         
         def do_connect():
-            success, message = self.wifi.connect(network['ssid'], password)
+            success, message = self.wifi.connect(
+                network['ssid'], 
+                password, 
+                network.get('security')
+            )
             self.connecting = False
             if success:
                 self.connection_status = "Connected!"

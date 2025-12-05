@@ -22,13 +22,12 @@ class WiFiManager:
         """Scan for available WiFi networks."""
         if not self.is_pi:
             return [
-                {'ssid': 'HomeNetwork', 'signal': 85, 'secured': True},
-                {'ssid': "Spencer's iPhone", 'signal': 70, 'secured': True},
-                {'ssid': 'CoffeeShop', 'signal': 45, 'secured': False},
+                {'ssid': 'HomeNetwork', 'signal': 85, 'secured': True, 'security': 'WPA2'},
+                {'ssid': "Spencer's iPhone", 'signal': 70, 'secured': True, 'security': 'WPA2'},
+                {'ssid': 'CoffeeShop', 'signal': 45, 'secured': False, 'security': ''},
             ]
         
         try:
-            # Use nmcli for scanning (more reliable than iwlist)
             result = subprocess.run(
                 ['sudo', 'nmcli', '-t', '-f', 'SSID,SIGNAL,SECURITY', 'device', 'wifi', 'list', '--rescan', 'yes'],
                 capture_output=True,
@@ -37,7 +36,6 @@ class WiFiManager:
             )
             
             if result.returncode != 0:
-                # Fallback to iwlist
                 return self._scan_with_iwlist()
             
             return self._parse_nmcli_scan(result.stdout)
@@ -54,7 +52,6 @@ class WiFiManager:
             if not line:
                 continue
             
-            # nmcli -t format: SSID:SIGNAL:SECURITY
             parts = line.split(':')
             if len(parts) >= 2:
                 ssid = parts[0]
@@ -68,14 +65,14 @@ class WiFiManager:
                 except ValueError:
                     signal = 0
                 
-                # Security field (may be empty for open networks)
                 security = parts[2] if len(parts) > 2 else ''
                 secured = bool(security and security != '--')
                 
                 networks.append({
                     'ssid': ssid,
                     'signal': signal,
-                    'secured': secured
+                    'secured': secured,
+                    'security': security  # Store security type (WPA1, WPA2, WPA3, etc.)
                 })
         
         return sorted(networks, key=lambda x: x['signal'], reverse=True)
@@ -109,7 +106,7 @@ class WiFiManager:
             if 'Cell' in line and 'Address' in line:
                 if current.get('ssid'):
                     networks.append(current)
-                current = {'ssid': '', 'signal': 0, 'secured': False}
+                current = {'ssid': '', 'signal': 0, 'secured': False, 'security': ''}
             
             elif 'ESSID:' in line:
                 match = re.search(r'ESSID:"(.+)"', line)
@@ -129,6 +126,12 @@ class WiFiManager:
             
             elif 'Encryption key:on' in line:
                 current['secured'] = True
+                current['security'] = 'WPA2'  # Assume WPA2 for iwlist
+            
+            elif 'WPA2' in line:
+                current['security'] = 'WPA2'
+            elif 'WPA' in line and 'WPA2' not in current.get('security', ''):
+                current['security'] = 'WPA'
         
         if current.get('ssid'):
             networks.append(current)
@@ -142,17 +145,16 @@ class WiFiManager:
         
         return sorted(unique, key=lambda x: x['signal'], reverse=True)
     
-    def connect(self, ssid, password=None):
+    def connect(self, ssid, password=None, security_type=None):
         """Connect to a WiFi network."""
         if not self.is_pi:
             return True, "Connected (mock)"
         
         try:
-            # First, check if we have a saved connection for this SSID
-            # If so, try to activate it first
+            # First, check if we have a saved connection
             existing = self._get_connection_name(ssid)
             
-            if existing and not password:
+            if existing:
                 # Try to activate existing connection
                 result = subprocess.run(
                     ['sudo', 'nmcli', 'connection', 'up', existing],
@@ -162,23 +164,39 @@ class WiFiManager:
                 )
                 if result.returncode == 0:
                     return True, "Connected successfully"
+                
+                # If existing connection failed with new password, delete and recreate
+                if password:
+                    subprocess.run(
+                        ['sudo', 'nmcli', 'connection', 'delete', existing],
+                        capture_output=True,
+                        timeout=10
+                    )
             
-            # Build the command - pass SSID and password as separate arguments
-            # This avoids shell escaping issues
+            # Create new connection with proper security settings
             if password:
+                # Determine key management type
+                key_mgmt = 'wpa-psk'  # Default to WPA-PSK (covers WPA/WPA2)
+                if security_type:
+                    if 'WPA3' in security_type:
+                        key_mgmt = 'sae'  # WPA3 uses SAE
+                    elif 'WPA' in security_type:
+                        key_mgmt = 'wpa-psk'
+                
                 cmd = [
-                    'sudo', 'nmcli', 'device', 'wifi', 'connect',
-                    ssid,  # nmcli handles special characters when passed as argument
-                    'password', password
+                    'sudo', 'nmcli', 'device', 'wifi', 'connect', ssid,
+                    'password', password,
+                    'wifi-sec.key-mgmt', key_mgmt
                 ]
             else:
+                # Open network
                 cmd = ['sudo', 'nmcli', 'device', 'wifi', 'connect', ssid]
             
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=45  # Longer timeout for hotspots
+                timeout=45
             )
             
             if result.returncode == 0:
@@ -186,23 +204,77 @@ class WiFiManager:
             else:
                 error = result.stderr.strip() or result.stdout.strip() or "Connection failed"
                 
-                # Parse common errors for better messages
+                # Parse common errors
                 if 'No network with SSID' in error:
-                    return False, "Network not found. Make sure hotspot is active."
+                    return False, "Network not found"
                 elif 'Secrets were required' in error or 'password' in error.lower():
                     return False, "Incorrect password"
                 elif 'timeout' in error.lower():
-                    return False, "Connection timed out. Try again."
+                    return False, "Connection timed out"
+                elif '802-11-wireless-security' in error:
+                    # Try alternative security method
+                    return self._try_alternative_connect(ssid, password)
                 
                 return False, error
                 
         except subprocess.TimeoutExpired:
-            return False, "Connection timed out. Is the hotspot active?"
+            return False, "Connection timed out"
         except Exception as e:
             return False, str(e)
     
+    def _try_alternative_connect(self, ssid, password):
+        """Try connecting with manual connection profile creation."""
+        try:
+            # Delete any existing broken connection
+            self._delete_connection(ssid)
+            
+            # Create connection manually with full settings
+            # This gives us more control over security settings
+            result = subprocess.run([
+                'sudo', 'nmcli', 'connection', 'add',
+                'type', 'wifi',
+                'con-name', ssid,
+                'ssid', ssid,
+                'wifi-sec.key-mgmt', 'wpa-psk',
+                'wifi-sec.psk', password
+            ], capture_output=True, text=True, timeout=15)
+            
+            if result.returncode != 0:
+                return False, "Failed to create connection profile"
+            
+            # Now activate it
+            result = subprocess.run(
+                ['sudo', 'nmcli', 'connection', 'up', ssid],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                return True, "Connected successfully"
+            else:
+                error = result.stderr.strip() or "Connection failed"
+                if 'Secrets were required' in error:
+                    return False, "Incorrect password"
+                return False, error
+                
+        except Exception as e:
+            return False, str(e)
+    
+    def _delete_connection(self, ssid):
+        """Delete a connection profile by SSID."""
+        try:
+            conn_name = self._get_connection_name(ssid) or ssid
+            subprocess.run(
+                ['sudo', 'nmcli', 'connection', 'delete', conn_name],
+                capture_output=True,
+                timeout=10
+            )
+        except:
+            pass
+    
     def _get_connection_name(self, ssid):
-        """Get the nmcli connection name for an SSID (may differ from SSID)."""
+        """Get the nmcli connection name for an SSID."""
         try:
             result = subprocess.run(
                 ['nmcli', '-t', '-f', 'NAME,TYPE', 'connection', 'show'],
@@ -238,10 +310,9 @@ class WiFiManager:
     def get_current_network(self):
         """Get currently connected network name."""
         if not self.is_pi:
-            return None  # Return None for mock so we can test connecting
+            return None
         
         try:
-            # Use nmcli for more reliable results
             result = subprocess.run(
                 ['nmcli', '-t', '-f', 'ACTIVE,SSID', 'device', 'wifi'],
                 capture_output=True,
@@ -251,9 +322,8 @@ class WiFiManager:
             
             for line in result.stdout.strip().split('\n'):
                 if line.startswith('yes:'):
-                    return line[4:]  # Everything after 'yes:'
+                    return line[4:]
             
-            # Fallback to iwgetid
             result = subprocess.run(
                 ['iwgetid', '-r'],
                 capture_output=True,
@@ -295,9 +365,7 @@ class WiFiManager:
             return True
         
         try:
-            # Find the connection name (might be different from SSID)
             conn_name = self._get_connection_name(ssid) or ssid
-            
             result = subprocess.run(
                 ['sudo', 'nmcli', 'connection', 'delete', conn_name],
                 capture_output=True,
@@ -306,3 +374,7 @@ class WiFiManager:
             return result.returncode == 0
         except:
             return False
+    
+    def is_saved(self, ssid):
+        """Check if a network is saved."""
+        return ssid in self.get_saved_networks()
