@@ -13,6 +13,9 @@ from ui_new.constants import *
 # Warm background
 WARM_BG = (255, 251, 245)
 
+# Muted sage for cards (20-30% sage over warm white)
+CARD_BG = (241, 244, 240)
+
 
 class SavedRecipesView:
     """View for saved AI-generated recipes."""
@@ -131,7 +134,7 @@ class SavedRecipesView:
         surface.blit(shadow_surface, (card_rect.x + 2, card_rect.y + 2))
         
         # Card background
-        pygame.draw.rect(surface, WHITE, card_rect, border_radius=12)
+        pygame.draw.rect(surface, CARD_BG, card_rect, border_radius=12)
         pygame.draw.rect(surface, SAGE, card_rect, border_radius=12, width=1)
         
         # Sparkle icon in teal circle

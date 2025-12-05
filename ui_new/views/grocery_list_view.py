@@ -13,6 +13,9 @@ from ui_new.constants import *
 # Warm background
 WARM_BG = (255, 251, 245)
 
+# Muted sage for cards (20-30% sage over warm white)
+CARD_BG = (241, 244, 240)
+
 # Checked item green (matches teal family)
 CHECK_GREEN = (80, 160, 140)
 CHECK_BG = (232, 245, 242)
@@ -186,7 +189,7 @@ class GroceryListView:
         screen.blit(shadow_surface, (card_rect.x + 2, card_rect.y + 2))
         
         # Card background
-        pygame.draw.rect(screen, WHITE, card_rect, border_radius=12)
+        pygame.draw.rect(screen, CARD_BG, card_rect, border_radius=12)
         pygame.draw.rect(screen, SAGE, card_rect, border_radius=12, width=1)
         
         # Name
@@ -329,7 +332,7 @@ class GroceryListView:
             shadow_surface = pygame.Surface((item_rect.width, item_rect.height), pygame.SRCALPHA)
             pygame.draw.rect(shadow_surface, (0, 0, 0, 8), (0, 0, item_rect.width, item_rect.height), border_radius=10)
             surface.blit(shadow_surface, (item_rect.x + 1, item_rect.y + 1))
-            pygame.draw.rect(surface, WHITE, item_rect, border_radius=10)
+            pygame.draw.rect(surface, CARD_BG, item_rect, border_radius=10)
             pygame.draw.rect(surface, SAGE, item_rect, border_radius=10, width=1)
         
         # Checkbox
