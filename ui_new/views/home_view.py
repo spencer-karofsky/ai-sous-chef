@@ -46,9 +46,15 @@ class HomeView:
         self.last_activity_ticks = pygame.time.get_ticks()
 
     def draw(self, screen, state):
-        # Check for sleep (only if not timer active/done and no modal)
-        if not self.timer_active and not self.timer_done and not self.show_timer_modal:
-            if pygame.time.get_ticks() - self.last_activity_ticks > self.sleep_timeout:
+        # Debug - remove after fixing
+        elapsed = pygame.time.get_ticks() - self.last_activity_ticks
+        if elapsed % 5000 < 50:  # Print every ~5 seconds
+            print(f"[Home] Elapsed: {elapsed // 1000}s, Sleeping: {self.is_sleeping}, Timeout: {self.sleep_timeout // 1000}s")
+        
+        # Check for sleep
+        if not self.is_sleeping and not self.timer_active and not self.timer_done and not self.show_timer_modal:
+            if elapsed > self.sleep_timeout:
+                print("[Home] Going to sleep!")
                 self.is_sleeping = True
         
         # Draw sleep screen
