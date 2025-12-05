@@ -46,9 +46,9 @@ class HomeView:
         
         self.gradient_surface = pygame.Surface((width, height))
         
-        # Soft warm white gradient
-        top_color = (255, 253, 250)      # Soft warm white
-        bottom_color = (250, 247, 242)   # Slightly warmer cream
+        # Soft warm white gradient - 10% warmer
+        top_color = (255, 251, 245)      # Warm ivory white
+        bottom_color = (252, 245, 235)   # Soft cream
         
         for y in range(height):
             t = y / height
