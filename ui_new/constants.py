@@ -28,13 +28,13 @@ HEIGHT = 720
 # Navigation bar
 NAV_HEIGHT = 85
 NAV_ICON_SIZE = 28
-NAV_ITEMS = ['Home', 'Search', 'My Kitchen', 'Create', 'Settings']  # Changed Favorites -> My Kitchen
+NAV_ITEMS = ['Home', 'Search', 'My Kitchen', 'Create', 'Settings']
 
 # Keyboard layout
 KEYBOARD_ROWS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "!"],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'],
 ]
 KEYBOARD_HEIGHT = 295
@@ -51,11 +51,11 @@ FONT_CAPTION = 18
 
 # Font names - will try in order until one works
 FONT_SANS = [
-    "SF Pro Display",      # macOS
-    "Segoe UI",            # Windows
-    "Roboto",              # Linux/Android
-    "DejaVu Sans",         # Linux fallback
-    "FreeSans",            # Linux fallback
-    "Arial",               # Universal fallback
-    None                   # Pygame default
+    "SF Pro Display",# macOS
+    "Segoe UI", # Windows
+    "Roboto", # Linux/Android
+    "DejaVu Sans", # Linux fallback
+    "FreeSans", # Linux fallback
+    "Arial", # Universal fallback
+    None # Pygame default
 ]
