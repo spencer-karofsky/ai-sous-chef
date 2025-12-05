@@ -60,6 +60,7 @@ class SettingsView:
                 'title': 'Device',
                 'items': [
                     {'id': 'system_info', 'label': 'View system info', 'type': 'action'},
+                    {'id': 'check_updates', 'label': 'Check for updates', 'type': 'action', 'subtitle': 'Pull latest from GitHub'},
                     {'id': 'restart', 'label': 'Restart app', 'type': 'action'},
                     {'id': 'clear_cache', 'label': 'Clear cache', 'type': 'action'},
                     {'id': 'factory_reset', 'label': 'Factory reset', 'type': 'danger', 'subtitle': 'Delete all config files'},
@@ -213,15 +214,97 @@ class SettingsView:
             self._draw_system_info_modal(screen, modal_x, modal_y, modal_width, modal_height)
         elif self.modal == 'network_status':
             self._draw_network_modal(screen, modal_x, modal_y, modal_width, modal_height)
+        elif self.modal == 'update_result':
+            self._draw_update_result_modal(screen, modal_x, modal_y, modal_width, modal_height)
         elif self.modal == 'confirm_reset':
             self._draw_confirm_modal(screen, modal_x, modal_y, modal_width, modal_height,
-                                     "Factory Reset", "This will delete all settings and preferences. Are you sure?")
+                                    "Factory Reset", "This will delete all settings and preferences. Are you sure?")
         elif self.modal == 'confirm_clear':
             self._draw_confirm_modal(screen, modal_x, modal_y, modal_width, modal_height,
-                                     "Clear Cache", "This will delete all cached data. Continue?")
+                                    "Clear Cache", "This will delete all cached data. Continue?")
         elif self.modal == 'confirm_shutdown':
             self._draw_confirm_modal(screen, modal_x, modal_y, modal_width, modal_height,
-                                     "Shut Down", "Are you sure you want to power off the device?")
+                                    "Shut Down", "Are you sure you want to power off the device?")
+    
+    def _draw_update_result_modal(self, screen, x, y, w, h):
+        title = self.fonts['header'].render("Update Result", True, SOFT_BLACK)
+        screen.blit(title, (x + 30, y + 25))
+        
+        if self.modal_data:
+            success = self.modal_data.get('success', False)
+            message = self.modal_data.get('message', '')
+            
+            # Status indicator
+            status_y = y + 80
+            if success:
+                status_text = "Success!"
+                status_color = (60, 160, 60)
+            else:
+                status_text = "Failed"
+                status_color = (200, 60, 60)
+            
+            status = self.fonts['body'].render(status_text, True, status_color)
+            screen.blit(status, (x + 30, status_y))
+            
+            # Message (wrap if needed)
+            msg_y = status_y + 50
+            words = message.split()
+            lines = []
+            current = ""
+            for word in words:
+                test = current + " " + word if current else word
+                if self.fonts['small'].size(test)[0] <= w - 60:
+                    current = test
+                else:
+                    lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+            
+            for line in lines[:6]:  # Limit to 6 lines
+                text = self.fonts['small'].render(line, True, DARK_GRAY)
+                screen.blit(text, (x + 30, msg_y))
+                msg_y += 28
+            
+            # Restart hint if successful
+            if success and 'Already up to date' not in message:
+                hint = self.fonts['caption'].render("Restart the app to apply updates", True, MID_GRAY)
+                screen.blit(hint, (x + 30, y + h - 100))
+        
+        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", SOFT_BLACK)
+    
+    def _do_git_pull(self):
+        """Run git pull to update the app."""
+        import subprocess
+        
+        try:
+            # Get the directory where the app is running
+            app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            
+            # Run git pull
+            result = subprocess.run(
+                ['git', 'pull'],
+                cwd=app_dir,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout.strip()
+                if 'Already up to date' in output:
+                    return {'success': True, 'message': 'Already up to date. No new updates available.'}
+                else:
+                    return {'success': True, 'message': f'Updated successfully!\n{output}'}
+            else:
+                return {'success': False, 'message': f'Git error: {result.stderr.strip()}'}
+        
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'message': 'Update timed out. Check your internet connection.'}
+        except FileNotFoundError:
+            return {'success': False, 'message': 'Git not found. Is git installed?'}
+        except Exception as e:
+            return {'success': False, 'message': f'Error: {str(e)}'}
     
     def _draw_system_info_modal(self, screen, x, y, w, h):
         title = self.fonts['header'].render("System Info", True, SOFT_BLACK)
@@ -331,9 +414,10 @@ class SettingsView:
         
         btn_y = modal_y + modal_height - 60
         
-        if self.modal in ('system_info', 'network_status'):
+        if self.modal in ('system_info', 'network_status', 'update_result'):
             if modal_x + modal_width - 130 <= x <= modal_x + modal_width - 30 and btn_y <= y <= btn_y + 40:
                 self.modal = None
+                self.modal_data = None
                 return 'modal_closed'
         
         elif self.modal in ('confirm_reset', 'confirm_clear', 'confirm_shutdown'):
@@ -393,6 +477,9 @@ class SettingsView:
                 self.modal = 'system_info'
             elif item['id'] == 'network_status':
                 self.modal = 'network_status'
+            elif item['id'] == 'check_updates':
+                self.modal_data = self._do_git_pull()
+                self.modal = 'update_result'
             elif item['id'] == 'clear_cache':
                 self.modal = 'confirm_clear'
             elif item['id'] == 'restart':
