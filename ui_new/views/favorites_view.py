@@ -8,10 +8,12 @@ Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
 import pygame
+import math
 from ui_new.constants import *
 
-# Warm background
-WARM_BG = (255, 251, 245)
+# Warm background gradient
+WARM_BG_TOP = (255, 251, 245)
+WARM_BG_BOTTOM = (252, 245, 235)
 
 
 class FavoritesView:
@@ -22,12 +24,37 @@ class FavoritesView:
         self.favorites_manager = None
         
         self.delete_confirm_id = None
+        self.gradient_surface = None
     
     def set_manager(self, manager):
         self.favorites_manager = manager
     
+    def _create_gradient(self, width, height):
+        """Create warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        for y in range(height):
+            t = y / height
+            r = int(WARM_BG_TOP[0] + (WARM_BG_BOTTOM[0] - WARM_BG_TOP[0]) * t)
+            g = int(WARM_BG_TOP[1] + (WARM_BG_BOTTOM[1] - WARM_BG_TOP[1]) * t)
+            b = int(WARM_BG_TOP[2] + (WARM_BG_BOTTOM[2] - WARM_BG_TOP[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
+    
+    def _draw_gradient_surface(self, surface, height):
+        """Draw gradient on a surface."""
+        for y in range(height):
+            t = y / height
+            r = int(WARM_BG_TOP[0] + (WARM_BG_BOTTOM[0] - WARM_BG_TOP[0]) * t)
+            g = int(WARM_BG_TOP[1] + (WARM_BG_BOTTOM[1] - WARM_BG_TOP[1]) * t)
+            b = int(WARM_BG_TOP[2] + (WARM_BG_BOTTOM[2] - WARM_BG_TOP[2]) * t)
+            pygame.draw.line(surface, (r, g, b), (0, y), (surface.get_width(), y))
+    
     def draw(self, screen, state, keyboard_visible=False):
-        screen.fill(WARM_BG)
+        screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
         content_bottom = HEIGHT - NAV_HEIGHT
         
         self._draw_header(screen)
@@ -81,7 +108,6 @@ class FavoritesView:
         screen.blit(hint, (cx - hint.get_width() // 2, cy + 100))
     
     def _draw_heart_outline(self, screen, cx, cy, size, color):
-        import math
         scale = size / 30
         points = []
         for i in range(100):
@@ -102,8 +128,9 @@ class FavoritesView:
         self.max_scroll = max(0, content_height - visible_height)
         self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
         
+        # Create scrollable surface with gradient
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WARM_BG)
+        self._draw_gradient_surface(content_surface, content_height)
         
         y = 10
         for i, fav in enumerate(favorites):
@@ -185,7 +212,6 @@ class FavoritesView:
         pygame.draw.line(surface, TEAL, (arrow_x + 6, arrow_y), (arrow_x, arrow_y + 6), 2)
     
     def _draw_heart_filled(self, surface, cx, cy, size, color):
-        import math
         scale = size / 15
         points = []
         for i in range(50):

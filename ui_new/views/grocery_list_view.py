@@ -10,8 +10,9 @@ Authors:
 import pygame
 from ui_new.constants import *
 
-# Warm background
-WARM_BG = (255, 251, 245)
+# Warm background gradient
+WARM_BG_TOP = (255, 251, 245)
+WARM_BG_BOTTOM = (252, 245, 235)
 
 # Muted sage for cards (20-30% sage over warm white)
 CARD_BG = (241, 244, 240)
@@ -35,14 +36,39 @@ class GroceryListView:
         self.current_list = None
         
         self.generating = False
+        self.gradient_surface = None
     
     def set_managers(self, grocery_manager, meal_plan_manager=None):
         """Set the data managers."""
         self.grocery_manager = grocery_manager
         self.meal_plan_manager = meal_plan_manager
     
+    def _create_gradient(self, width, height):
+        """Create warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        for y in range(height):
+            t = y / height
+            r = int(WARM_BG_TOP[0] + (WARM_BG_BOTTOM[0] - WARM_BG_TOP[0]) * t)
+            g = int(WARM_BG_TOP[1] + (WARM_BG_BOTTOM[1] - WARM_BG_TOP[1]) * t)
+            b = int(WARM_BG_TOP[2] + (WARM_BG_BOTTOM[2] - WARM_BG_TOP[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
+    
+    def _draw_gradient_surface(self, surface, height):
+        """Draw gradient on a surface."""
+        for y in range(height):
+            t = y / height
+            r = int(WARM_BG_TOP[0] + (WARM_BG_BOTTOM[0] - WARM_BG_TOP[0]) * t)
+            g = int(WARM_BG_TOP[1] + (WARM_BG_BOTTOM[1] - WARM_BG_TOP[1]) * t)
+            b = int(WARM_BG_TOP[2] + (WARM_BG_BOTTOM[2] - WARM_BG_TOP[2]) * t)
+            pygame.draw.line(surface, (r, g, b), (0, y), (surface.get_width(), y))
+    
     def draw(self, screen, state, keyboard_visible=False):
-        screen.fill(WARM_BG)
+        screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
         content_bottom = HEIGHT - NAV_HEIGHT
         
         if self.current_list_id and self.current_list:
@@ -245,9 +271,9 @@ class GroceryListView:
         self.max_scroll = max(0, content_height - visible_height)
         self.scroll_offset = max(0, min(self.scroll_offset, self.max_scroll))
         
-        # Create scrollable surface
+        # Create scrollable surface with gradient
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WARM_BG)
+        self._draw_gradient_surface(content_surface, content_height)
         
         y = 10
         for cat_name, items in categories.items():
