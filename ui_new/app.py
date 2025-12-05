@@ -492,6 +492,36 @@ class RecipeApp:
             if len(parts) == 2:
                 day_name, meal_type = parts
                 self._view_meal_plan_recipe(day_name, meal_type)
+        
+        elif action.startswith('hydrate_meal_'):
+            parts = action.replace('hydrate_meal_', '').split('_')
+            if len(parts) == 2:
+                day_name, meal_type = parts
+                self._hydrate_and_view_meal(day_name, meal_type)
+    
+    def _hydrate_and_view_meal(self, day_name: str, meal_type: str):
+        """Hydrate a recipe and then view it."""
+        self.loading = True
+        meal_view = self.views['MealPrep']
+        
+        def do_hydrate():
+            try:
+                recipe = self.meal_plan_manager.hydrate_recipe(day_name, meal_type)
+                if recipe:
+                    self.prompter.current_recipe = recipe
+                    self.current_recipe_source = 'meal_plan'
+                    self.current_recipe_s3_key = None
+                    self.previous_view = 'MealPrep'
+                    self.current_view = 'Recipe'
+                    self.scroll_offset = 0
+                    # Clear modal state
+                    meal_view.selected_meal = None
+            except Exception as e:
+                print(f"Error hydrating recipe: {e}")
+            finally:
+                self.loading = False
+        
+        threading.Thread(target=do_hydrate, daemon=True).start()
 
     def _view_meal_plan_recipe(self, day_name: str, meal_type: str):
         """Hydrate and view a recipe from the meal plan."""
