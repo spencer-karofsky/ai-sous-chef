@@ -137,10 +137,10 @@ class FavoritesView:
         
         # Source badge
         source = favorite.get('source', 'search')
-        if source == 'generated':
-            badge_text = self.fonts['caption'].render("AI Generated", True, DARK_GRAY)
-            badge_x = card_rect.x + card_rect.width - badge_text.get_width() - 45
-            surface.blit(badge_text, (badge_x, card_rect.y + 20))
+        # if source == 'generated':
+        #     badge_text = self.fonts['caption'].render("AI Generated", True, DARK_GRAY)
+        #     badge_x = card_rect.x + card_rect.width - badge_text.get_width() - 45
+        #     surface.blit(badge_text, (badge_x, card_rect.y + 20))
         
         # Delete button (trash icon / X)
         delete_x = card_rect.x + card_rect.width - 35
