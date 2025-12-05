@@ -53,6 +53,7 @@ class MealPlanManager:
         
         week = {
             'week_start': monday.strftime('%Y-%m-%d'),
+            'plan_name': None,
             'days': {}
         }
         
@@ -68,6 +69,15 @@ class MealPlanManager:
             }
         
         return week
+
+    def get_plan_name(self) -> str:
+        """Get a descriptive name for the current plan."""
+        name = self.plan.get('plan_name')
+        if name:
+            return name
+        # Fallback to date-based name
+        week_start = self.plan.get('week_start', '')
+        return f"Week of {week_start}" if week_start else "Meal Plan"
     
     def generate_meal_plan(self, user_prompt: str, dietary_prefs: List[str] = None, 
                           exclusions: List[str] = None, skill_level: str = "Beginner") -> bool:
@@ -99,9 +109,9 @@ class MealPlanManager:
         context = "\n".join(context_parts)
         
         system_prompt = """You are a professional meal planner. Generate a weekly meal plan with descriptive recipe names.
-
 Return ONLY valid JSON in this exact format:
 {
+    "plan_name": "Short Creative Name for This Plan",
     "Monday": {
         "Breakfast": "Descriptive Recipe Name",
         "Lunch": "Descriptive Recipe Name", 
@@ -110,8 +120,8 @@ Return ONLY valid JSON in this exact format:
     "Tuesday": {...},
     ...for all 7 days
 }
-
 Guidelines:
+- plan_name should be 3-5 words, catchy and descriptive (e.g., "Protein Power Week", "Mediterranean Refresh", "Quick & Clean Eats")
 - Recipe names should be descriptive enough to recreate (e.g., "Garlic Herb Grilled Chicken with Roasted Vegetables" not just "Chicken")
 - Include key ingredients or cooking method in the name
 - Breakfast should be quick options
@@ -133,7 +143,7 @@ Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 day
                 prompt=prompt,
                 system_prompt=system_prompt,
                 model_id=self.bedrock.models_dict['claude-haiku-3'],
-                max_tokens=1500,  # Plenty for just names
+                max_tokens=1500, # Plenty for just names
                 temperature=0.7
             )
             
@@ -145,8 +155,12 @@ Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 day
             
             # Parse the response
             meal_plan_data = json.loads(response.strip())
-            
-            # Update plan with recipe names (no full recipe data yet)
+
+            # Extract plan name
+            plan_name = meal_plan_data.get('plan_name', user_prompt[:30])
+            self.plan['plan_name'] = f"{plan_name} - {self.plan['week_start']}"
+
+            # Update plan with recipe names
             for day_name in self.DAYS:
                 if day_name in meal_plan_data:
                     day_meals = meal_plan_data[day_name]
