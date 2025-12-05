@@ -953,7 +953,7 @@ class RecipeApp:
                         running = False
 
             # Draw
-            self.screen.fill(WHITE)
+            self.screen.fill((255, 251, 245))
 
             state = self._get_state()
             view = self.views.get(self.current_view)

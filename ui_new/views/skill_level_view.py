@@ -78,14 +78,6 @@ class SkillLevelView:
         # Title
         title = self.fonts['header'].render("Cooking Skill Level", True, SOFT_BLACK)
         screen.blit(title, (150, 28))
-        
-        # Subtitle as pill on right
-        current = self._get_selected()
-        pill_width = self.fonts['small'].size(current)[0] + 16
-        pill_rect = pygame.Rect(WIDTH - pill_width - 30, 30, pill_width, 26)
-        pygame.draw.rect(screen, SAGE_LIGHT, pill_rect, border_radius=13)
-        subtitle = self.fonts['small'].render(current, True, SOFT_BLACK)
-        screen.blit(subtitle, (pill_rect.x + 8, pill_rect.y + 4))
     
     def _draw_skill_options(self, screen, content_bottom):
         y_start = 90
@@ -114,8 +106,10 @@ class SkillLevelView:
             title_color = WHITE
             desc_color = (200, 225, 220)
             icon_color = WHITE
+            icon_outline_color = (255, 255, 255, 100)  # Faded white for unfilled bars
             radio_outer = WHITE
             radio_inner = TEAL
+            icon_bg = (30, 110, 135)  # Darker teal for icon background
         else:
             # Unselected: muted sage background with border
             pygame.draw.rect(screen, CARD_BG, card_rect, border_radius=16)
@@ -123,19 +117,18 @@ class SkillLevelView:
             title_color = SOFT_BLACK
             desc_color = DARK_GRAY
             icon_color = TEAL
+            icon_outline_color = SAGE  # Sage for unfilled bars
             radio_outer = SAGE
             radio_inner = None
+            icon_bg = SAGE_LIGHT
         
         # Icon in circle
         icon_cx = card_rect.x + 50
-        icon_cy = card_rect.y + 50
+        icon_cy = card_rect.y + 65
         
-        if is_selected:
-            pygame.draw.circle(screen, (255, 255, 255, 50), (icon_cx, icon_cy), 28)
-        else:
-            pygame.draw.circle(screen, SAGE_LIGHT, (icon_cx, icon_cy), 28)
+        pygame.draw.circle(screen, icon_bg, (icon_cx, icon_cy), 28)
         
-        self._draw_skill_icon(screen, level['icon'], icon_cx - 18, icon_cy - 18, icon_color)
+        self._draw_skill_icon(screen, level['icon'], icon_cx, icon_cy, icon_color, icon_outline_color)
         
         # Title
         title = self.fonts['header'].render(level['title'], True, title_color)
@@ -175,24 +168,44 @@ class SkillLevelView:
         else:
             pygame.draw.circle(screen, radio_outer, (radio_x, radio_y), 14, 2)
     
-    def _draw_skill_icon(self, screen, icon_type, x, y, color):
-        """Draw skill level icons."""
-        if icon_type == 'egg':
-            # Simple egg shape
-            pygame.draw.ellipse(screen, color, (x + 4, y, 28, 36), 3)
+    def _draw_skill_icon(self, screen, icon_type, cx, cy, color, bg_color=None):
+        """Draw skill level icons as ascending bars."""
+        bar_width = 8
+        bar_gap = 4
+        max_bars = 3
         
-        elif icon_type == 'pan':
-            # Frying pan
-            pygame.draw.circle(screen, color, (x + 16, y + 18), 14, 3)
-            pygame.draw.line(screen, color, (x + 28, y + 18), (x + 40, y + 18), 3)
+        # Determine how many bars to fill based on level
+        if icon_type == 'egg':  # Beginner
+            filled_bars = 1
+        elif icon_type == 'pan':  # Intermediate
+            filled_bars = 2
+        else:  # Advanced
+            filled_bars = 3
         
-        elif icon_type == 'chef':
-            # Chef hat
-            pygame.draw.ellipse(screen, color, (x + 2, y + 18, 32, 18), 3)
-            pygame.draw.arc(screen, color, (x + 5, y, 26, 24), 0, 3.14, 3)
-            pygame.draw.circle(screen, color, (x + 8, y + 8), 6, 2)
-            pygame.draw.circle(screen, color, (x + 18, y + 4), 7, 2)
-            pygame.draw.circle(screen, color, (x + 28, y + 8), 6, 2)
+        # Bar heights (ascending)
+        heights = [14, 22, 30]
+        
+        # Calculate starting x to center the bars
+        total_width = (bar_width * max_bars) + (bar_gap * (max_bars - 1))
+        start_x = cx - total_width // 2
+        
+        # Base y (bottom of bars)
+        base_y = cy + 15
+        
+        for i in range(max_bars):
+            bar_x = start_x + i * (bar_width + bar_gap)
+            bar_height = heights[i]
+            bar_y = base_y - bar_height
+            
+            if i < filled_bars:
+                # Filled bar
+                pygame.draw.rect(screen, color, (bar_x, bar_y, bar_width, bar_height), border_radius=3)
+            else:
+                # Empty bar (outline only) - use bg_color if provided, else use color with outline
+                if bg_color:
+                    pygame.draw.rect(screen, bg_color, (bar_x, bar_y, bar_width, bar_height), border_radius=3, width=2)
+                else:
+                    pygame.draw.rect(screen, color, (bar_x, bar_y, bar_width, bar_height), border_radius=3, width=2)
     
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos

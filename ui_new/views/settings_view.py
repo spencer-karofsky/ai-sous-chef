@@ -19,7 +19,7 @@ WARM_BG = (255, 251, 245)
 class SettingsView:
     def __init__(self, fonts, config):
         self.fonts = fonts
-        self.config = config  # Use passed-in config instead of creating new one
+        self.config = config
         self.scroll_offset = 0
         self.max_scroll = 0
         
@@ -73,6 +73,9 @@ class SettingsView:
         ]
     
     def draw(self, screen, state, keyboard_visible=False):
+        # Fill entire screen with warm background first (before anything else)
+        screen.fill(WARM_BG)
+        
         content_bottom = HEIGHT - NAV_HEIGHT
         
         self._draw_header(screen)
@@ -82,7 +85,7 @@ class SettingsView:
             self._draw_modal(screen)
     
     def _draw_header(self, screen):
-        y = 25
+        y = 28
         title = self.fonts['header'].render("Settings", True, SOFT_BLACK)
         screen.blit(title, (40, y))
     
@@ -176,9 +179,8 @@ class SettingsView:
             toggle_x = right_x - toggle_width + 20
             toggle_y = center_y - 16
             
-            # Toggle track: white fill with sage border
-            pygame.draw.rect(surface, WHITE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
-            pygame.draw.rect(surface, SAGE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16, width=1)
+            # Toggle track: sage fill (same as slider track)
+            pygame.draw.rect(surface, SAGE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
             
             # Selected option pill in teal
             option_width = toggle_width // 2
@@ -187,7 +189,7 @@ class SettingsView:
             
             for i, opt in enumerate(options):
                 opt_x = toggle_x + (i * option_width) + option_width // 2
-                opt_color = WHITE if i == current else SOFT_BLACK
+                opt_color = WHITE if i == current else WHITE
                 opt_text = self.fonts['caption'].render(opt, True, opt_color)
                 surface.blit(opt_text, (opt_x - opt_text.get_width() // 2, toggle_y + 8))
         
@@ -260,7 +262,7 @@ class SettingsView:
             status_y = y + 80
             if success:
                 status_text = "Success!"
-                status_color = (60, 160, 60)
+                status_color = (60, 160, 120)
             else:
                 status_text = "Failed"
                 status_color = (200, 60, 60)
@@ -283,7 +285,7 @@ class SettingsView:
             if current:
                 lines.append(current)
             
-            for line in lines[:6]:  # Limit to 6 lines
+            for line in lines[:6]:
                 text = self.fonts['small'].render(line, True, DARK_GRAY)
                 screen.blit(text, (x + 30, msg_y))
                 msg_y += 28
@@ -301,10 +303,8 @@ class SettingsView:
         import subprocess
         
         try:
-            # Get the directory where the app is running
             app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             
-            # Run git pull
             result = subprocess.run(
                 ['git', 'pull'],
                 cwd=app_dir,
@@ -353,7 +353,7 @@ class SettingsView:
         info_y = y + 80
         
         status_text = "Connected" if status['connected'] else "Disconnected"
-        status_color = (60, 160, 60) if status['connected'] else (200, 60, 60)
+        status_color = (60, 160, 120) if status['connected'] else (200, 60, 60)
         
         label = self.fonts['body'].render("Status:", True, DARK_GRAY)
         value = self.fonts['body'].render(status_text, True, status_color)
@@ -399,8 +399,14 @@ class SettingsView:
             screen.blit(text, (x + 30, msg_y))
             msg_y += 35
         
-        # Cancel button in sage light with soft black text
-        self._draw_modal_button(screen, x + 30, y + h - 60, 100, 40, "Cancel", SAGE_LIGHT, SOFT_BLACK)
+        # Cancel button - sage light with sage border
+        cancel_rect = pygame.Rect(x + 30, y + h - 60, 100, 40)
+        pygame.draw.rect(screen, SAGE_LIGHT, cancel_rect, border_radius=8)
+        pygame.draw.rect(screen, SAGE, cancel_rect, border_radius=8, width=1)
+        cancel_text = self.fonts['small'].render("Cancel", True, SOFT_BLACK)
+        screen.blit(cancel_text, (cancel_rect.x + (100 - cancel_text.get_width()) // 2, 
+                                  cancel_rect.y + (40 - cancel_text.get_height()) // 2))
+        
         # Confirm button in red
         self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Confirm", (200, 60, 60), WHITE)
     
@@ -552,7 +558,6 @@ class SettingsView:
                 print(f"Shutdown error: {e}")
         else:
             print("Shutdown requested (mock - not on Pi)")
-            # On non-Linux, just quit the app
             import pygame
             pygame.quit()
             sys.exit(0)
