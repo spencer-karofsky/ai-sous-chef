@@ -487,14 +487,12 @@ class RecipeApp:
         # Favorite actions
         elif action == 'toggle_favorite':
             self._toggle_favorite()
-        elif action.startswith('view_'):
-            fav_id = action.replace('view_', '')
-            self._view_favorite(fav_id)
-
         elif action.startswith('view_saved_'):
             recipe_id = action.replace('view_saved_', '')
             self._view_saved_recipe(recipe_id)
-
+        elif action.startswith('view_'):
+            fav_id = action.replace('view_', '')
+            self._view_favorite(fav_id)
         elif action == 'generate_list':
             self._generate_grocery_list()
 
