@@ -266,6 +266,18 @@ class RecipeView:
         instructions = recipe.get('instructions', [])
         
         for i, step in enumerate(instructions[:15], 1):
+            # Strip leading number if present (e.g., "1.", "1)", "1 -", "1:")
+            step_text = step.strip()
+            if step_text and step_text[0].isdigit():
+                # Remove leading digits and common separators
+                j = 0
+                while j < len(step_text) and step_text[j].isdigit():
+                    j += 1
+                # Skip past separator (., ), :, -)
+                while j < len(step_text) and step_text[j] in '.):- ':
+                    j += 1
+                step_text = step_text[j:].strip()
+            
             # Numbered circle
             circle_x = x + 14
             circle_y = y + 12
@@ -279,7 +291,7 @@ class RecipeView:
             
             # Step text with wrapping
             text_x = x + 40
-            lines = self._wrap_text(step, width - 50, 'small')
+            lines = self._wrap_text(step_text, width - 50, 'small')
             
             step_y = y
             for line in lines:
