@@ -697,6 +697,14 @@ class RecipeApp:
                 self.navbar.active = nav_action
                 self.keyboard.visible = False
                 self.scroll_offset = 0
+                # Reset home activity when navigating to it
+                if nav_action == 'Home':
+                    self.views['Home'].reset_activity()
+            elif nav_action != self.current_view and self.current_view != 'Recipe':
+                self.current_view = nav_action
+                self.navbar.active = nav_action
+                self.keyboard.visible = False
+                self.scroll_offset = 0
             elif self.current_view == 'Recipe':
                 self.current_view = nav_action
                 self.navbar.active = nav_action

@@ -30,6 +30,78 @@ class HomeView:
         # Flash state
         self.flash_on = False
         self.last_flash_ticks = 0
+        
+        # Sleep state
+        self.is_sleeping = False
+        self.last_activity_ticks = pygame.time.get_ticks()
+        self.sleep_timeout = 30000 # 30 seconds
+
+    def wake(self):
+        """Wake from sleep."""
+        self.is_sleeping = False
+        self.last_activity_ticks = pygame.time.get_ticks()
+
+    def reset_activity(self):
+        """Reset the inactivity timer."""
+        self.last_activity_ticks = pygame.time.get_ticks()
+
+    def draw(self, screen, state):
+        # Check for sleep (only if not timer active/done and no modal)
+        if not self.timer_active and not self.timer_done and not self.show_timer_modal:
+            if pygame.time.get_ticks() - self.last_activity_ticks > self.sleep_timeout:
+                self.is_sleeping = True
+        
+        # Draw sleep screen
+        if self.is_sleeping:
+            self._draw_sleep_screen(screen)
+            return
+        
+        # Flash red if timer done
+        if self.timer_done:
+            ticks = pygame.time.get_ticks()
+            if ticks - self.last_flash_ticks > 500:
+                self.flash_on = not self.flash_on
+                self.last_flash_ticks = ticks
+            if self.flash_on:
+                screen.fill((255, 60, 60))
+        
+        self._draw_header(screen)
+        self._draw_clock_box(screen)
+        self._draw_quick_actions(screen)
+        self._draw_todays_meals(screen)
+        
+        if self.timer_active:
+            self._draw_timer_pill(screen)
+        
+        if self.timer_done:
+            self._draw_timer_done(screen)
+        
+        if self.show_timer_modal:
+            self._draw_timer_modal(screen)
+
+    def _draw_sleep_screen(self, screen):
+        """Draw minimal sleep screen with clock."""
+        screen.fill((15, 15, 20))  # Very dark background
+        
+        now = datetime.now()
+        time_str = now.strftime("%I:%M").lstrip("0")
+        date_str = now.strftime("%A, %B %d")
+        
+        # Large centered clock
+        time_text = self.fonts['title'].render(time_str, True, (80, 80, 90))
+        time_x = (WIDTH - time_text.get_width()) // 2
+        time_y = HEIGHT // 2 - 40
+        screen.blit(time_text, (time_x, time_y))
+        
+        # Date below
+        date_text = self.fonts['body'].render(date_str, True, (60, 60, 70))
+        date_x = (WIDTH - date_text.get_width()) // 2
+        screen.blit(date_text, (time_x + time_text.get_width() + 15, time_y + 20))
+        
+        # Subtle hint
+        hint_text = self.fonts['caption'].render("Tap anywhere to wake", True, (40, 40, 50))
+        hint_x = (WIDTH - hint_text.get_width()) // 2
+        screen.blit(hint_text, (hint_x, HEIGHT - 60))
     
     def set_managers(self, meal_plan_manager=None, favorites_manager=None, saved_recipes_manager=None):
         self.meal_plan_manager = meal_plan_manager
@@ -345,6 +417,13 @@ class HomeView:
     
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos
+
+        if self.is_sleeping:
+            self.wake()
+            return 'woke_up'
+        
+        # Reset activity timer on any touch
+        self.reset_activity()
         
         # Timer done dismiss
         if self.timer_done:
