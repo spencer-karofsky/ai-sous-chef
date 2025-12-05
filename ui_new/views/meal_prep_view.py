@@ -10,6 +10,28 @@ Authors:
 import pygame
 from ui_new.constants import *
 
+# Warm background
+WARM_BG = (255, 251, 245)
+
+# Meal card colors
+CARD_BORDER = (226, 226, 226)  # #e2e2e2
+CARD_TEXT = (51, 51, 51)  # #333
+
+# Active card - teal at 10-15% opacity over white ≈ this color
+ACTIVE_CARD_BG = (217, 234, 240)  # Teal 12% opacity approximation
+ACTIVE_CARD_TEXT = SOFT_BLACK
+
+# Meal type micro-label colors
+BREAKFAST_COLOR = (255, 246, 210)  # #fff6d2
+LUNCH_COLOR = (232, 240, 232)  # #e8f0e8
+DINNER_COLOR = (243, 237, 228)  # #f3ede4
+
+MEAL_COLORS = {
+    'Breakfast': BREAKFAST_COLOR,
+    'Lunch': LUNCH_COLOR,
+    'Dinner': DINNER_COLOR,
+}
+
 
 class MealPrepView:
     """AI-powered weekly meal planning view."""
@@ -76,17 +98,18 @@ class MealPrepView:
             self._draw_generating_overlay(screen)
     
     def _draw_header(self, screen):
-        # Back button
-        back_rect = pygame.Rect(30, 20, 80, 40)
-        pygame.draw.rect(screen, LIGHT_GRAY, back_rect, border_radius=20)
+        # Back button - sage light with sage border
+        back_rect = pygame.Rect(30, 20, 95, 40)
+        pygame.draw.rect(screen, SAGE_LIGHT, back_rect, border_radius=20)
+        pygame.draw.rect(screen, SAGE, back_rect, border_radius=20, width=1)
         
-        ax = back_rect.x + 20
+        ax = back_rect.x + 22
         ay = back_rect.y + 20
-        pygame.draw.line(screen, CHARCOAL, (ax + 8, ay - 6), (ax, ay), 2)
-        pygame.draw.line(screen, CHARCOAL, (ax, ay), (ax + 8, ay + 6), 2)
+        pygame.draw.line(screen, TEAL, (ax + 8, ay - 6), (ax, ay), 2)
+        pygame.draw.line(screen, TEAL, (ax, ay), (ax + 8, ay + 6), 2)
         
-        back_text = self.fonts['small'].render("Back", True, CHARCOAL)
-        screen.blit(back_text, (ax + 15, ay - 9))
+        back_text = self.fonts['small'].render("Back", True, SOFT_BLACK)
+        screen.blit(back_text, (ax + 18, ay - 9))
         
         # Title
         title = self.fonts['header'].render("Meal Prep", True, SOFT_BLACK)
@@ -103,19 +126,29 @@ class MealPrepView:
             sub_text = self.fonts['small'].render(subtitle, True, DARK_GRAY)
             screen.blit(sub_text, (130, 52))
         
-        # Generate/Regenerate button (top right)
+        # Regenerate button - teal pill with shadow
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
-            btn_rect = pygame.Rect(WIDTH - 180, 20, 150, 40)
-            pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=20)
+            btn_width = 170
+            btn_rect = pygame.Rect(WIDTH - btn_width - 30, 18, btn_width, 44)
+            
+            # Soft shadow
+            shadow_rect = pygame.Rect(btn_rect.x + 2, btn_rect.y + 3, btn_width, 44)
+            shadow_surface = pygame.Surface((btn_width, 44), pygame.SRCALPHA)
+            pygame.draw.rect(shadow_surface, (0, 0, 0, 25), (0, 0, btn_width, 44), border_radius=22)
+            screen.blit(shadow_surface, shadow_rect.topleft)
+            
+            # Button
+            pygame.draw.rect(screen, TEAL, btn_rect, border_radius=22)
             btn_text = self.fonts['small'].render("✦ Regenerate", True, WHITE)
-            screen.blit(btn_text, (btn_rect.x + 25, btn_rect.y + 10))
+            text_x = btn_rect.x + (btn_width - btn_text.get_width()) // 2
+            screen.blit(btn_text, (text_x, btn_rect.y + 12))
     
     def _draw_empty_state(self, screen):
         """Draw empty state with generate button."""
         cx, cy = WIDTH // 2, HEIGHT // 2 - 60
         
-        # Icon - meal prep container
-        pygame.draw.circle(screen, (80, 160, 220), (cx, cy - 20), 60)
+        # Icon - meal prep container with teal
+        pygame.draw.circle(screen, TEAL, (cx, cy - 20), 60)
         
         # Container icon
         container_w = 70
@@ -124,11 +157,11 @@ class MealPrepView:
         top = cy - 20 - container_h // 2
         
         pygame.draw.rect(screen, WHITE, (left, top, container_w, container_h), border_radius=6)
-        pygame.draw.rect(screen, (80, 160, 220), (left, top, container_w, 10), 
+        pygame.draw.rect(screen, TEAL, (left, top, container_w, 10), 
                         border_top_left_radius=6, border_top_right_radius=6)
-        pygame.draw.line(screen, (80, 160, 220), (left + container_w // 3, top + 12), 
+        pygame.draw.line(screen, TEAL, (left + container_w // 3, top + 12), 
                         (left + container_w // 3, top + container_h - 4), 2)
-        pygame.draw.line(screen, (80, 160, 220), (left + 2 * container_w // 3, top + 12), 
+        pygame.draw.line(screen, TEAL, (left + 2 * container_w // 3, top + 12), 
                         (left + 2 * container_w // 3, top + container_h - 4), 2)
         
         # Title
@@ -139,10 +172,16 @@ class MealPrepView:
         desc = self.fonts['body'].render("Let AI generate a personalized meal plan", True, DARK_GRAY)
         screen.blit(desc, (cx - desc.get_width() // 2, cy + 100))
         
-        # Generate button
+        # Generate button - teal with shadow
         btn_width = 320
         btn_rect = pygame.Rect(cx - btn_width // 2, cy + 150, btn_width, 55)
-        pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12)
+        
+        # Shadow
+        shadow_surface = pygame.Surface((btn_width, 55), pygame.SRCALPHA)
+        pygame.draw.rect(shadow_surface, (0, 0, 0, 25), (0, 0, btn_width, 55), border_radius=12)
+        screen.blit(shadow_surface, (btn_rect.x + 3, btn_rect.y + 4))
+        
+        pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
         
         # Sparkle icon
         spark_x = btn_rect.x + 30
@@ -176,7 +215,7 @@ class MealPrepView:
         visible_height = content_bottom - y_start
         
         # Calculate content height
-        day_height = 75
+        day_height = 80
         content_height = len(self.DAYS) * day_height + 80  # Extra for clear button
         
         self.max_scroll = max(0, content_height - visible_height)
@@ -184,7 +223,7 @@ class MealPrepView:
         
         # Create scrollable surface
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WHITE)
+        content_surface.fill(WARM_BG)
         
         y = 10
         days_data = self.meal_plan_manager.get_all_days()
@@ -194,50 +233,72 @@ class MealPrepView:
             self._draw_day_row(content_surface, day_name, day_data, y)
             y += day_height
         
-        # Clear week button at bottom
+        # Clear week button at bottom - sage light with sage border
         clear_rect = pygame.Rect(30, y + 10, WIDTH - 60, 45)
-        pygame.draw.rect(content_surface, LIGHT_GRAY, clear_rect, border_radius=10)
-        clear_text = self.fonts['body'].render("Clear Week", True, DARK_GRAY)
+        pygame.draw.rect(content_surface, SAGE_LIGHT, clear_rect, border_radius=10)
+        pygame.draw.rect(content_surface, SAGE, clear_rect, border_radius=10, width=1)
+        clear_text = self.fonts['body'].render("Clear Week", True, SOFT_BLACK)
         content_surface.blit(clear_text, (clear_rect.x + (clear_rect.width - clear_text.get_width()) // 2, 
                                           clear_rect.y + 12))
         
         screen.blit(content_surface, (0, y_start), (0, self.scroll_offset, WIDTH, visible_height))
     
     def _draw_day_row(self, surface, day_name, day_data, y):
-        # Day label
+        # Day label strip - subtle muted background
+        strip_rect = pygame.Rect(20, y, 70, 65)
+        pygame.draw.rect(surface, SAGE_LIGHT, strip_rect, border_radius=8)
+        
+        # Day abbreviation
         day_label = self.fonts['body'].render(day_name[:3], True, SOFT_BLACK)
-        surface.blit(day_label, (30, y + 22))
+        label_x = strip_rect.x + (strip_rect.width - day_label.get_width()) // 2
+        surface.blit(day_label, (label_x, y + 12))
         
         # Date
         date_str = day_data.get('date', '')[-5:] if day_data.get('date') else ''
         if date_str:
             date_label = self.fonts['caption'].render(date_str, True, DARK_GRAY)
-            surface.blit(date_label, (30, y + 45))
+            date_x = strip_rect.x + (strip_rect.width - date_label.get_width()) // 2
+            surface.blit(date_label, (date_x, y + 38))
         
         # Meal slots
         meals = day_data.get('meals', {})
-        slot_width = (WIDTH - 140) // 3
-        slot_x = 90
+        slot_width = (WIDTH - 130) // 3
+        slot_x = 100
         
         for meal_type in self.MEALS:
             meal = meals.get(meal_type)
-            self._draw_meal_slot(surface, slot_x, y + 5, slot_width - 10, 55, meal_type, meal)
+            self._draw_meal_slot(surface, slot_x, y + 3, slot_width - 10, 60, meal_type, meal)
             slot_x += slot_width
     
     def _draw_meal_slot(self, surface, x, y, width, height, meal_type, meal):
         slot_rect = pygame.Rect(x, y, width, height)
+        meal_color = MEAL_COLORS.get(meal_type, SAGE_LIGHT)
         
         if meal:
-            # Check if hydrated
             is_hydrated = meal.get('hydrated', False)
             
             if is_hydrated:
-                # Hydrated - solid dark
-                pygame.draw.rect(surface, SOFT_BLACK, slot_rect, border_radius=10)
+                # Active/hydrated card - teal tinted with shadow
+                shadow_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+                pygame.draw.rect(shadow_surface, (0, 0, 0, 20), (0, 0, width, height), border_radius=10)
+                surface.blit(shadow_surface, (x + 2, y + 2))
+                
+                pygame.draw.rect(surface, ACTIVE_CARD_BG, slot_rect, border_radius=10)
+                text_color = ACTIVE_CARD_TEXT
+                type_color = DARK_GRAY
             else:
-                # Not hydrated - outlined with subtle fill
-                pygame.draw.rect(surface, (240, 245, 250), slot_rect, border_radius=10)
-                pygame.draw.rect(surface, SOFT_BLACK, slot_rect, 2, border_radius=10)
+                # Normal card - white with soft border
+                pygame.draw.rect(surface, WHITE, slot_rect, border_radius=10)
+                pygame.draw.rect(surface, CARD_BORDER, slot_rect, 1, border_radius=10)
+                text_color = CARD_TEXT
+                type_color = DARK_GRAY
+            
+            # Meal type micro-label
+            label_rect = pygame.Rect(x + 8, y + 8, 60, 18)
+            pygame.draw.rect(surface, meal_color, label_rect, border_radius=9)
+            type_text = self.fonts['caption'].render(meal_type, True, CARD_TEXT)
+            type_x = label_rect.x + (label_rect.width - type_text.get_width()) // 2
+            surface.blit(type_text, (type_x, y + 10))
             
             # Recipe name
             name = meal.get('name', 'Recipe')
@@ -247,21 +308,18 @@ class MealPrepView:
                     name = name[:-1]
                 name += '...'
             
-            text_color = WHITE if is_hydrated else SOFT_BLACK
             name_text = self.fonts['small'].render(name, True, text_color)
-            surface.blit(name_text, (x + 10, y + 10))
-            
-            # Meal type label
-            type_color = MID_GRAY if is_hydrated else DARK_GRAY
-            type_text = self.fonts['caption'].render(meal_type, True, type_color)
-            surface.blit(type_text, (x + 10, y + 32))
+            surface.blit(name_text, (x + 10, y + 32))
         else:
-            # Empty slot
-            pygame.draw.rect(surface, LIGHT_GRAY, slot_rect, border_radius=10)
+            # Empty slot - subtle background
+            pygame.draw.rect(surface, SAGE_LIGHT, slot_rect, border_radius=10)
             
-            type_text = self.fonts['caption'].render(meal_type, True, DARK_GRAY)
-            type_x = x + (width - type_text.get_width()) // 2
-            surface.blit(type_text, (type_x, y + height // 2 - 8))
+            # Meal type micro-label centered
+            label_rect = pygame.Rect(x + (width - 70) // 2, y + (height - 22) // 2, 70, 22)
+            pygame.draw.rect(surface, meal_color, label_rect, border_radius=11)
+            type_text = self.fonts['caption'].render(meal_type, True, CARD_TEXT)
+            type_x = label_rect.x + (label_rect.width - type_text.get_width()) // 2
+            surface.blit(type_text, (type_x, label_rect.y + 3))
     
     def _draw_recipe_modal(self, screen):
         """Draw modal to preview/generate recipe."""
@@ -279,9 +337,9 @@ class MealPrepView:
         # Close button (top right)
         close_x = modal_x + modal_width - 35
         close_y = modal_y + 35
-        pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 18)
-        pygame.draw.line(screen, CHARCOAL, (close_x - 6, close_y - 6), (close_x + 6, close_y + 6), 2)
-        pygame.draw.line(screen, CHARCOAL, (close_x + 6, close_y - 6), (close_x - 6, close_y + 6), 2)
+        pygame.draw.circle(screen, SAGE_LIGHT, (close_x, close_y), 18)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x - 6, close_y - 6), (close_x + 6, close_y + 6), 2)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x + 6, close_y - 6), (close_x - 6, close_y + 6), 2)
         
         if not self.selected_meal:
             return
@@ -295,7 +353,7 @@ class MealPrepView:
         screen.blit(title_text, (modal_x + 25, modal_y + 20))
         
         # Recipe name - truncate to fit
-        max_name_width = modal_width - 100  # Leave room for close button
+        max_name_width = modal_width - 100
         if self.fonts['header'].size(recipe_name)[0] > max_name_width:
             while self.fonts['header'].size(recipe_name + '...')[0] > max_name_width and len(recipe_name) > 5:
                 recipe_name = recipe_name[:-1]
@@ -308,25 +366,40 @@ class MealPrepView:
             # Show recipe preview info
             recipe_data = self.selected_meal.get('recipe_data', {})
             
-            # Time and servings
+            # Time and servings as pills
             info_y = modal_y + 95
+            pill_x = modal_x + 25
+            
             if recipe_data.get('total_time'):
-                time_text = self.fonts['small'].render(f"⏱ {recipe_data['total_time']}", True, CHARCOAL)
-                screen.blit(time_text, (modal_x + 25, info_y))
+                time_str = recipe_data['total_time']
+                time_width = self.fonts['small'].size(time_str)[0] + 20
+                time_rect = pygame.Rect(pill_x, info_y, time_width, 28)
+                pygame.draw.rect(screen, SAGE_LIGHT, time_rect, border_radius=14)
+                time_text = self.fonts['small'].render(time_str, True, SOFT_BLACK)
+                screen.blit(time_text, (pill_x + 10, info_y + 5))
+                pill_x += time_width + 10
             
             if recipe_data.get('servings'):
-                servings_text = self.fonts['small'].render(f"🍽 {recipe_data['servings']}", True, CHARCOAL)
-                screen.blit(servings_text, (modal_x + 180, info_y))
+                servings_str = recipe_data['servings']
+                servings_width = self.fonts['small'].size(servings_str)[0] + 20
+                servings_rect = pygame.Rect(pill_x, info_y, servings_width, 28)
+                pygame.draw.rect(screen, SAGE_LIGHT, servings_rect, border_radius=14)
+                servings_text = self.fonts['small'].render(servings_str, True, SOFT_BLACK)
+                screen.blit(servings_text, (pill_x + 10, info_y + 5))
             
-            # Ingredient count
+            # Ingredient count as pill
             ing_count = len(recipe_data.get('ingredients', []))
             if ing_count:
-                ing_text = self.fonts['small'].render(f"{ing_count} ingredients", True, DARK_GRAY)
-                screen.blit(ing_text, (modal_x + 25, info_y + 35))
+                ing_str = f"{ing_count} ingredients"
+                ing_width = self.fonts['small'].size(ing_str)[0] + 20
+                ing_rect = pygame.Rect(modal_x + 25, info_y + 38, ing_width, 28)
+                pygame.draw.rect(screen, SAGE_LIGHT, ing_rect, border_radius=14)
+                ing_text = self.fonts['small'].render(ing_str, True, SOFT_BLACK)
+                screen.blit(ing_text, (modal_x + 35, info_y + 43))
             
-            # View Recipe button
+            # View Recipe button - teal
             btn_rect = pygame.Rect(modal_x + 25, modal_y + modal_height - 70, modal_width - 50, 50)
-            pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12)
+            pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
             btn_text = self.fonts['body'].render("View Full Recipe", True, WHITE)
             screen.blit(btn_text, (btn_rect.x + (btn_rect.width - btn_text.get_width()) // 2, btn_rect.y + 13))
         else:
@@ -339,9 +412,9 @@ class MealPrepView:
             hint_text2 = self.fonts['small'].render("ingredients, instructions, and nutrition info.", True, MID_GRAY)
             screen.blit(hint_text2, (modal_x + 25, modal_y + 158))
             
-            # Generate Recipe button
+            # Generate Recipe button - teal
             btn_rect = pygame.Rect(modal_x + 25, modal_y + modal_height - 70, modal_width - 50, 50)
-            pygame.draw.rect(screen, (80, 160, 220), btn_rect, border_radius=12)
+            pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
             
             # Sparkle icon
             spark_x = btn_rect.x + 30
@@ -371,17 +444,18 @@ class MealPrepView:
         # Close button
         close_x = modal_x + modal_width - 45
         close_y = modal_y + 25
-        pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 15)
-        pygame.draw.line(screen, CHARCOAL, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
-        pygame.draw.line(screen, CHARCOAL, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
+        pygame.draw.circle(screen, SAGE_LIGHT, (close_x, close_y), 15)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
         
         # Subtitle
         sub = self.fonts['small'].render("Describe what kind of meals you want this week", True, DARK_GRAY)
         screen.blit(sub, (modal_x + 25, modal_y + 55))
         
-        # Input field
+        # Input field - white with soft border
         field_rect = pygame.Rect(modal_x + 25, modal_y + 90, modal_width - 50, 50)
-        pygame.draw.rect(screen, LIGHT_GRAY, field_rect, border_radius=10)
+        pygame.draw.rect(screen, WHITE, field_rect, border_radius=10)
+        pygame.draw.rect(screen, SAGE, field_rect, border_radius=10, width=1)
         
         if self.prompt_text:
             input_text = self.fonts['body'].render(self.prompt_text, True, SOFT_BLACK)
@@ -412,48 +486,51 @@ class MealPrepView:
                     chip_y += chip_height + 10
                 
                 chip_rect = pygame.Rect(chip_x, chip_y, chip_width, chip_height)
-                pygame.draw.rect(screen, LIGHT_GRAY, chip_rect, border_radius=17)
+                pygame.draw.rect(screen, SAGE_LIGHT, chip_rect, border_radius=17)
+                pygame.draw.rect(screen, SAGE, chip_rect, border_radius=17, width=1)
                 
                 chip_text = self.fonts['small'].render(prompt, True, SOFT_BLACK)
                 screen.blit(chip_text, (chip_x + 12, chip_y + 8))
                 
                 chip_x += chip_width + 10
         
-        # Generate button
+        # Generate button - teal when active, muted when disabled
         btn_y = modal_y + modal_height - 65
         btn_rect = pygame.Rect(modal_x + modal_width - 175, btn_y, 150, 45)
-        btn_color = SOFT_BLACK if self.prompt_text.strip() else MID_GRAY
+        btn_color = TEAL if self.prompt_text.strip() else MID_GRAY
         pygame.draw.rect(screen, btn_color, btn_rect, border_radius=10)
         
         btn_text = self.fonts['body'].render("Generate", True, WHITE)
-        screen.blit(btn_text, (btn_rect.x + 35, btn_rect.y + 11))
+        screen.blit(btn_text, (btn_rect.x + (btn_rect.width - btn_text.get_width()) // 2, btn_rect.y + 11))
         
-        # Cancel button
+        # Cancel button - sage light
         cancel_rect = pygame.Rect(modal_x + 25, btn_y, 100, 45)
-        pygame.draw.rect(screen, LIGHT_GRAY, cancel_rect, border_radius=10)
+        pygame.draw.rect(screen, SAGE_LIGHT, cancel_rect, border_radius=10)
+        pygame.draw.rect(screen, SAGE, cancel_rect, border_radius=10, width=1)
         cancel_text = self.fonts['body'].render("Cancel", True, SOFT_BLACK)
-        screen.blit(cancel_text, (cancel_rect.x + 18, cancel_rect.y + 11))
+        screen.blit(cancel_text, (cancel_rect.x + (cancel_rect.width - cancel_text.get_width()) // 2, cancel_rect.y + 11))
     
     def _draw_generating_overlay(self, screen):
         """Draw generating animation overlay."""
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 230))
+        overlay.fill((255, 251, 245, 240))
         screen.blit(overlay, (0, 0))
         
         cx, cy = WIDTH // 2, HEIGHT // 2
         
-        # Spinning animation
+        # Spinning animation with teal
         ticks = pygame.time.get_ticks()
         for i in range(8):
             angle = i * 45 + ticks / 5
             alpha = 255 - i * 25
             px = cx + int(30 * pygame.math.Vector2(1, 0).rotate(angle).x)
             py = cy + int(30 * pygame.math.Vector2(1, 0).rotate(angle).y)
-            pygame.draw.circle(screen, SOFT_BLACK, (px, py), 6 - i * 0.5)
+            color = TEAL if i < 3 else SAGE
+            pygame.draw.circle(screen, color, (px, py), 6 - i * 0.5)
         
         # Status text
         status = self.generation_status or "Generating your meal plan..."
-        status_text = self.fonts['body'].render(status, True, CHARCOAL)
+        status_text = self.fonts['body'].render(status, True, SOFT_BLACK)
         screen.blit(status_text, (cx - status_text.get_width() // 2, cy + 50))
     
     def handle_touch(self, pos, state, keyboard_visible=False):
@@ -469,12 +546,13 @@ class MealPrepView:
             return self._handle_modal_touch(x, y, keyboard_visible)
         
         # Back button
-        if 30 <= x <= 110 and 20 <= y <= 60:
+        if 30 <= x <= 125 and 20 <= y <= 60:
             return 'back'
         
         # Regenerate button (when meals exist)
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
-            if WIDTH - 180 <= x <= WIDTH - 30 and 20 <= y <= 60:
+            btn_width = 170
+            if WIDTH - btn_width - 30 <= x <= WIDTH - 30 and 18 <= y <= 62:
                 self.show_generate_modal = True
                 self.prompt_text = ""
                 return 'show_generate'
@@ -494,7 +572,7 @@ class MealPrepView:
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
             y_start = 85
             content_y = y - y_start + self.scroll_offset
-            clear_y = len(self.DAYS) * 75 + 10
+            clear_y = len(self.DAYS) * 80 + 10
             
             if 30 <= x <= WIDTH - 30 and clear_y <= content_y <= clear_y + 45:
                 self.meal_plan_manager.clear_week()
@@ -504,14 +582,14 @@ class MealPrepView:
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
             y_start = 85
             content_y = y - y_start + self.scroll_offset
-            day_height = 75
+            day_height = 80
             
             for i, day_name in enumerate(self.DAYS):
                 row_y = 10 + i * day_height
-                if row_y <= content_y <= row_y + 65:
+                if row_y <= content_y <= row_y + 70:
                     # Check which meal slot was tapped
-                    slot_width = (WIDTH - 140) // 3
-                    slot_x_start = 90
+                    slot_width = (WIDTH - 130) // 3
+                    slot_x_start = 100
                     
                     for j, meal_type in enumerate(self.MEALS):
                         slot_x = slot_x_start + j * slot_width
@@ -535,10 +613,10 @@ class MealPrepView:
         modal_x = (WIDTH - modal_width) // 2
         modal_y = (HEIGHT - modal_height) // 2
         
-        # Close button - match the draw position
+        # Close button
         close_x = modal_x + modal_width - 35
         close_y = modal_y + 35
-        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 324:  # 18^2
+        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 324:
             self.show_recipe_modal = False
             self.selected_meal = None
             self.selected_day = None
@@ -582,7 +660,7 @@ class MealPrepView:
         # Close button
         close_x = modal_x + modal_width - 45
         close_y = modal_y + 25
-        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 225:  # 15^2
+        if (x - close_x) ** 2 + (y - close_y) ** 2 <= 225:
             self.show_generate_modal = False
             return 'close_modal'
         

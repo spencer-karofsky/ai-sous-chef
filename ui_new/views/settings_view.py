@@ -12,6 +12,9 @@ import os
 import sys
 from ui_new.constants import *
 
+# Warm background color matching app palette
+WARM_BG = (255, 251, 245)
+
 
 class SettingsView:
     def __init__(self, fonts, config):
@@ -86,7 +89,7 @@ class SettingsView:
     def _draw_content(self, screen, content_bottom):
         content_height = self._calculate_content_height()
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WHITE)
+        content_surface.fill(WARM_BG)
         
         y = 10
         
@@ -173,8 +176,8 @@ class SettingsView:
             toggle_x = right_x - toggle_width + 20
             toggle_y = center_y - 16
             
-            # Toggle track in sage light
-            pygame.draw.rect(surface, SAGE_LIGHT, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
+            # Toggle track: white fill with sage border
+            pygame.draw.rect(surface, WHITE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
             pygame.draw.rect(surface, SAGE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16, width=1)
             
             # Selected option pill in teal
