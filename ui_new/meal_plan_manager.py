@@ -3,6 +3,7 @@ ui_new/meal_plan_manager.py
 
 Description:
     * Manager for meal planning - AI generation and storage
+    * Two-phase approach: generate plan outline, then hydrate recipes on-demand
 
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
@@ -71,11 +72,11 @@ class MealPlanManager:
     def generate_meal_plan(self, user_prompt: str, dietary_prefs: List[str] = None, 
                           exclusions: List[str] = None, skill_level: str = "Beginner") -> bool:
         """
-        Generate a complete weekly meal plan using AI.
+        Generate a weekly meal plan outline (names only, no full recipes).
         
         Args:
             user_prompt: User's description of what they want
-            dietary_prefs: List of dietary preferences (e.g., ['vegetarian', 'low-carb'])
+            dietary_prefs: List of dietary preferences
             exclusions: List of ingredients to exclude
             skill_level: Cooking skill level
             
@@ -83,44 +84,40 @@ class MealPlanManager:
             True if successful, False otherwise
         """
         print(f"[MealPlan] Starting generation with prompt: {user_prompt}")
-        print(f"[MealPlan] Dietary: {dietary_prefs}, Exclusions: {exclusions}, Skill: {skill_level}")
-        print(f"[MealPlan] Bedrock manager: {self.bedrock}")
         
         if not self.bedrock:
             print("[MealPlan] ERROR: No bedrock manager available")
             return False
         
-        # Build context from preferences
+        # Build context
         context_parts = []
         if dietary_prefs:
             context_parts.append(f"Dietary preferences: {', '.join(dietary_prefs)}")
         if exclusions:
             context_parts.append(f"Exclude these ingredients: {', '.join(exclusions)}")
         context_parts.append(f"Cooking skill level: {skill_level}")
-        
         context = "\n".join(context_parts)
         
-        system_prompt = """You are a professional meal planner and chef. Generate a complete weekly meal plan.
+        system_prompt = """You are a professional meal planner. Generate a weekly meal plan with descriptive recipe names.
 
 Return ONLY valid JSON in this exact format:
 {
     "Monday": {
-        "Breakfast": {"name": "...", "description": "...", "prep_time": "...", "cook_time": "...", "total_time": "...", "servings": "...", "ingredients": ["..."], "instructions": ["..."], "nutrition": {"calories": "...", "protein": "...", "carbs": "...", "fat": "..."}},
-        "Lunch": {...},
-        "Dinner": {...}
+        "Breakfast": "Descriptive Recipe Name",
+        "Lunch": "Descriptive Recipe Name", 
+        "Dinner": "Descriptive Recipe Name"
     },
     "Tuesday": {...},
     ...for all 7 days
 }
 
 Guidelines:
-- Create practical, delicious recipes that match the user's request
-- Vary the meals throughout the week (don't repeat the same dish)
-- Consider ingredient reuse to minimize waste (e.g., if buying chicken, use it in multiple meals)
-- Breakfast should be quick and easy
-- Include prep_time, cook_time as human readable (e.g., "15 minutes")
-- Include realistic nutrition estimates
-- Each recipe should have 4-8 ingredients and clear instructions"""
+- Recipe names should be descriptive enough to recreate (e.g., "Garlic Herb Grilled Chicken with Roasted Vegetables" not just "Chicken")
+- Include key ingredients or cooking method in the name
+- Breakfast should be quick options
+- Vary meals throughout the week - no repeats
+- Consider ingredient reuse across days (e.g., if using chicken Monday, use it again Wednesday)
+- Match the user's dietary requirements exactly"""
 
         prompt = f"""Create a weekly meal plan based on this request:
 
@@ -128,49 +125,41 @@ User request: {user_prompt}
 
 {context}
 
-Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monday through Sunday)."""
+Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 days (Monday through Sunday)."""
 
         try:
-            print("[MealPlan] Calling Bedrock API...")
+            print("[MealPlan] Calling Bedrock API for plan outline...")
             response = self.bedrock.invoke_model_with_system(
                 prompt=prompt,
                 system_prompt=system_prompt,
                 model_id=self.bedrock.models_dict['claude-haiku-3'],
-                max_tokens=8000,
+                max_tokens=1500,  # Plenty for just names
                 temperature=0.7
             )
-            
-            print(f"[MealPlan] Got response: {response[:200] if response else 'None'}...")
             
             if not response:
                 print("[MealPlan] ERROR: Empty response from Bedrock")
                 return False
             
+            print(f"[MealPlan] Got response: {response[:300]}...")
+            
             # Parse the response
             meal_plan_data = json.loads(response.strip())
             
-            # Update our plan with the generated meals
+            # Update plan with recipe names (no full recipe data yet)
             for day_name in self.DAYS:
                 if day_name in meal_plan_data:
                     day_meals = meal_plan_data[day_name]
                     for meal_type in self.MEAL_TYPES:
                         if meal_type in day_meals and day_meals[meal_type]:
-                            recipe = day_meals[meal_type]
+                            recipe_name = day_meals[meal_type]
                             self.plan['days'][day_name]['meals'][meal_type] = {
-                                'name': recipe.get('name', 'Untitled'),
-                                'description': recipe.get('description', ''),
-                                'prep_time': recipe.get('prep_time', ''),
-                                'cook_time': recipe.get('cook_time', ''),
-                                'total_time': recipe.get('total_time', ''),
-                                'servings': recipe.get('servings', ''),
-                                'ingredients': recipe.get('ingredients', []),
-                                'instructions': recipe.get('instructions', []),
-                                'nutrition': recipe.get('nutrition', {}),
-                                'recipe_data': recipe  # Store full recipe
+                                'name': recipe_name,
+                                'hydrated': False  # Flag: full recipe not yet generated
                             }
             
             self._save()
-            print(f"[MealPlan] SUCCESS: Saved {self.get_meal_count()} meals")
+            print(f"[MealPlan] SUCCESS: Planned {self.get_meal_count()} meals")
             return True
             
         except json.JSONDecodeError as e:
@@ -180,6 +169,91 @@ Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monda
         except Exception as e:
             print(f"[MealPlan] ERROR: {type(e).__name__}: {e}")
             return False
+    
+    def hydrate_recipe(self, day_name: str, meal_type: str) -> Optional[Dict]:
+        """
+        Generate full recipe details for a specific meal slot.
+        Call this when user taps on a meal to view it.
+        
+        Args:
+            day_name: Day of the week
+            meal_type: Breakfast, Lunch, or Dinner
+            
+        Returns:
+            Full recipe dict, or None if failed
+        """
+        if not self.bedrock:
+            return None
+        
+        meal = self.plan.get('days', {}).get(day_name, {}).get('meals', {}).get(meal_type)
+        if not meal:
+            return None
+        
+        # Already hydrated? Return cached recipe
+        if meal.get('hydrated') and meal.get('recipe_data'):
+            return meal['recipe_data']
+        
+        recipe_name = meal.get('name', '')
+        if not recipe_name:
+            return None
+        
+        print(f"[MealPlan] Hydrating recipe: {recipe_name}")
+        
+        system_prompt = """You are a professional chef. Create a complete recipe based on the given name.
+
+Return ONLY valid JSON:
+{
+    "name": "Recipe Name",
+    "description": "Brief 1-2 sentence description",
+    "prep_time": "X minutes",
+    "cook_time": "X minutes",
+    "total_time": "X minutes",
+    "servings": "X servings",
+    "ingredients": ["1 cup ingredient", "2 tbsp ingredient", ...],
+    "instructions": ["Step 1...", "Step 2...", ...],
+    "nutrition": {"calories": "XXX", "protein": "XXg", "carbs": "XXg", "fat": "XXg"}
+}
+
+Create a practical, delicious recipe with 4-8 ingredients and clear instructions."""
+
+        prompt = f"Create a complete recipe for: {recipe_name}"
+        
+        try:
+            response = self.bedrock.invoke_model_with_system(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                model_id=self.bedrock.models_dict['claude-haiku-3'],
+                max_tokens=1500,
+                temperature=0.4
+            )
+            
+            if not response:
+                return None
+            
+            recipe_data = json.loads(response.strip())
+            
+            # Update the meal slot with full recipe
+            self.plan['days'][day_name]['meals'][meal_type] = {
+                'name': recipe_data.get('name', recipe_name),
+                'description': recipe_data.get('description', ''),
+                'prep_time': recipe_data.get('prep_time', ''),
+                'cook_time': recipe_data.get('cook_time', ''),
+                'total_time': recipe_data.get('total_time', ''),
+                'servings': recipe_data.get('servings', ''),
+                'ingredients': recipe_data.get('ingredients', []),
+                'instructions': recipe_data.get('instructions', []),
+                'nutrition': recipe_data.get('nutrition', {}),
+                'recipe_data': recipe_data,
+                'hydrated': True
+            }
+            
+            self._save()
+            print(f"[MealPlan] Hydrated: {recipe_name}")
+            return recipe_data
+            
+        except (json.JSONDecodeError, Exception) as e:
+            print(f"[MealPlan] ERROR hydrating recipe: {e}")
+            return None
     
     def get_week_start(self) -> str:
         """Get the start date of current week."""
@@ -192,6 +266,15 @@ Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monda
     def get_all_days(self) -> Dict:
         """Get all days in the plan."""
         return self.plan.get('days', {})
+    
+    def get_meal(self, day_name: str, meal_type: str) -> Optional[Dict]:
+        """Get a specific meal."""
+        return self.plan.get('days', {}).get(day_name, {}).get('meals', {}).get(meal_type)
+    
+    def is_hydrated(self, day_name: str, meal_type: str) -> bool:
+        """Check if a meal has full recipe data."""
+        meal = self.get_meal(day_name, meal_type)
+        return meal.get('hydrated', False) if meal else False
     
     def set_meal(self, day_name: str, meal_type: str, recipe: Optional[Dict]):
         """Manually assign a recipe to a meal slot."""
@@ -207,7 +290,8 @@ Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monda
                 'servings': recipe.get('servings', ''),
                 'ingredients': recipe.get('ingredients', []),
                 'total_time': recipe.get('total_time', ''),
-                'recipe_data': recipe
+                'recipe_data': recipe,
+                'hydrated': True
             }
         else:
             self.plan['days'][day_name]['meals'][meal_type] = None
@@ -240,14 +324,16 @@ Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monda
                         'name': meal.get('name'),
                         'ingredients': meal.get('ingredients', []),
                         'servings': meal.get('servings', ''),
+                        'hydrated': meal.get('hydrated', False)
                     })
         return meals
     
     def get_all_ingredients(self) -> List[str]:
-        """Get all ingredients from all meals (for grocery list)."""
+        """Get all ingredients from hydrated meals (for grocery list)."""
         ingredients = []
         for meal in self.get_all_meals():
-            ingredients.extend(meal.get('ingredients', []))
+            if meal.get('hydrated'):
+                ingredients.extend(meal.get('ingredients', []))
         return ingredients
     
     def get_meal_count(self) -> int:
@@ -258,6 +344,26 @@ Generate complete recipes for Breakfast, Lunch, and Dinner for all 7 days (Monda
                 if meal:
                     count += 1
         return count
+    
+    def get_hydrated_count(self) -> int:
+        """Count how many meals have full recipes."""
+        count = 0
+        for day_data in self.plan.get('days', {}).values():
+            for meal in day_data.get('meals', {}).values():
+                if meal and meal.get('hydrated'):
+                    count += 1
+        return count
+    
+    def hydrate_all(self) -> int:
+        """Hydrate all meals (useful before generating grocery list)."""
+        hydrated = 0
+        for day_name in self.DAYS:
+            for meal_type in self.MEAL_TYPES:
+                meal = self.get_meal(day_name, meal_type)
+                if meal and not meal.get('hydrated'):
+                    if self.hydrate_recipe(day_name, meal_type):
+                        hydrated += 1
+        return hydrated
     
     def new_week(self):
         """Start a fresh week."""

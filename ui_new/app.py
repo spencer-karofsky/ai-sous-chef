@@ -487,6 +487,33 @@ class RecipeApp:
             self.active_input = 'meal_prompt'
             self.keyboard.visible = True
 
+        elif action.startswith('view_meal_'):
+            parts = action.replace('view_meal_', '').split('_')
+            if len(parts) == 2:
+                day_name, meal_type = parts
+                self._view_meal_plan_recipe(day_name, meal_type)
+
+    def _view_meal_plan_recipe(self, day_name: str, meal_type: str):
+        """Hydrate and view a recipe from the meal plan."""
+        self.loading = True
+        
+        def do_hydrate():
+            try:
+                recipe = self.meal_plan_manager.hydrate_recipe(day_name, meal_type)
+                if recipe:
+                    self.prompter.current_recipe = recipe
+                    self.current_recipe_source = 'meal_plan'
+                    self.current_recipe_s3_key = None
+                    self.previous_view = 'MealPrep'
+                    self.current_view = 'Recipe'
+                    self.scroll_offset = 0
+            except Exception as e:
+                print(f"Error hydrating recipe: {e}")
+            finally:
+                self.loading = False
+        
+        threading.Thread(target=do_hydrate, daemon=True).start()
+
     def _view_saved_recipe(self, recipe_id):
         """Load and view a saved recipe."""
         recipe_data = self.saved_recipes_manager.get_by_id(recipe_id)
@@ -548,12 +575,6 @@ class RecipeApp:
                 
                 if success:
                     meal_view.generation_status = "Meal plan created!"
-                    # Auto-generate grocery list
-                    meal_view.generation_status = "Generating grocery list..."
-                    self.grocery_list_manager.generate_from_meals(
-                        self.meal_plan_manager.get_all_meals(),
-                        f"Week of {self.meal_plan_manager.get_week_start()}"
-                    )
                 else:
                     meal_view.generation_status = "Failed to generate. Try again."
                     

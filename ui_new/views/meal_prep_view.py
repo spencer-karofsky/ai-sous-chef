@@ -131,7 +131,7 @@ class MealPrepView:
         screen.blit(desc, (cx - desc.get_width() // 2, cy + 100))
         
         # Generate button
-        btn_width = 280
+        btn_width = 300
         btn_rect = pygame.Rect(cx - btn_width // 2, cy + 150, btn_width, 55)
         pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12)
         
@@ -388,6 +388,26 @@ class MealPrepView:
             if 30 <= x <= WIDTH - 30 and clear_y <= content_y <= clear_y + 45:
                 self.meal_plan_manager.clear_week()
                 return 'cleared_week'
+            
+        if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
+            y_start = 85
+            content_y = y - y_start + self.scroll_offset
+            day_height = 75
+            
+            for i, day_name in enumerate(self.DAYS):
+                row_y = 10 + i * day_height
+                if row_y <= content_y <= row_y + 65:
+                    # Check which meal slot was tapped
+                    slot_width = (WIDTH - 140) // 3
+                    slot_x_start = 90
+                    
+                    for j, meal_type in enumerate(self.MEALS):
+                        slot_x = slot_x_start + j * slot_width
+                        if slot_x <= x <= slot_x + slot_width - 10:
+                            meal = self.meal_plan_manager.get_meal(day_name, meal_type)
+                            if meal:
+                                return f'view_meal_{day_name}_{meal_type}'
+                    break
         
         return None
     
