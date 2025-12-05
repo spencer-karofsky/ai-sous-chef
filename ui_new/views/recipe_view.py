@@ -63,18 +63,18 @@ class RecipeView:
     def _draw_header(self, screen, recipe):
         """Minimal header with back, title, and favorite."""
         # Back button - sage light with teal chevron
-        back_rect = pygame.Rect(30, 22, 70, 36)
+        back_rect = pygame.Rect(30, 22, 85, 36)
         pygame.draw.rect(screen, SAGE_LIGHT, back_rect, border_radius=18)
         pygame.draw.rect(screen, SAGE, back_rect, border_radius=18, width=1)
         
         # Teal chevron
-        ax = back_rect.x + 22
+        ax = back_rect.x + 20
         ay = back_rect.y + 18
         pygame.draw.line(screen, TEAL, (ax + 6, ay - 5), (ax, ay), 2)
         pygame.draw.line(screen, TEAL, (ax, ay), (ax + 6, ay + 5), 2)
         
         back_text = self.fonts['small'].render("Back", True, SOFT_BLACK)
-        screen.blit(back_text, (ax + 12, ay - 8))
+        screen.blit(back_text, (ax + 14, ay - 8))
         
         # Heart button
         heart_rect = pygame.Rect(WIDTH - 58, 22, 36, 36)
@@ -355,7 +355,8 @@ class RecipeView:
             screen.blit(status, (bubble_margin, bar_y - 20))
     
     def _draw_sparkle_icon(self, screen, cx, cy, color):
-        """Draw small AI sparkle icon."""
+        """Draw AI sparkle icon with small companion sparkle."""
+        # Main sparkle
         size = 8
         points = [
             (cx, cy - size),
@@ -369,6 +370,23 @@ class RecipeView:
         ]
         points = [(int(px), int(py)) for px, py in points]
         pygame.draw.polygon(screen, color, points)
+        
+        # Small companion sparkle (top right)
+        small_cx = cx + 10
+        small_cy = cy - 8
+        small_size = 4
+        small_points = [
+            (small_cx, small_cy - small_size),
+            (small_cx + small_size * 0.25, small_cy - small_size * 0.25),
+            (small_cx + small_size, small_cy),
+            (small_cx + small_size * 0.25, small_cy + small_size * 0.25),
+            (small_cx, small_cy + small_size),
+            (small_cx - small_size * 0.25, small_cy + small_size * 0.25),
+            (small_cx - small_size, small_cy),
+            (small_cx - small_size * 0.25, small_cy - small_size * 0.25),
+        ]
+        small_points = [(int(px), int(py)) for px, py in small_points]
+        pygame.draw.polygon(screen, color, small_points)
     
     def _wrap_text(self, text, max_width, font_key='small'):
         """Wrap text to fit within max_width."""
@@ -399,7 +417,7 @@ class RecipeView:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
         
         # Back button
-        if 30 <= x <= 100 and 22 <= y <= 58:
+        if 30 <= x <= 115 and 22 <= y <= 58:
             return 'back'
         
         # Heart button
