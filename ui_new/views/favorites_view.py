@@ -15,6 +15,9 @@ from ui_new.constants import *
 WARM_BG_TOP = (255, 251, 245)
 WARM_BG_BOTTOM = (252, 245, 235)
 
+# Muted sage for cards (20-30% sage over warm white)
+CARD_BG = (241, 244, 240)
+
 
 class FavoritesView:
     def __init__(self, fonts):
@@ -147,8 +150,8 @@ class FavoritesView:
         pygame.draw.rect(shadow_surface, (0, 0, 0, 15), (0, 0, card_rect.width, card_rect.height), border_radius=12)
         surface.blit(shadow_surface, (card_rect.x + 2, card_rect.y + 2))
         
-        # Card background - white
-        pygame.draw.rect(surface, WHITE, card_rect, border_radius=12)
+        # Card background - soft sage tint
+        pygame.draw.rect(surface, CARD_BG, card_rect, border_radius=12)
         pygame.draw.rect(surface, SAGE, card_rect, border_radius=12, width=1)
         
         # Heart icon (filled, teal)
