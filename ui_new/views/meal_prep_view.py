@@ -111,9 +111,9 @@ class MealPrepView:
         back_text = self.fonts['small'].render("Back", True, SOFT_BLACK)
         screen.blit(back_text, (ax + 18, ay - 9))
         
-        # Title
+        # Title - more space from back button
         title = self.fonts['header'].render("Meal Prep", True, SOFT_BLACK)
-        screen.blit(title, (130, 28))
+        screen.blit(title, (150, 28))
         
         # Regenerate button - teal pill with shadow
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
@@ -202,27 +202,24 @@ class MealPrepView:
         
         y_start = 70
         
-        # Draw column headers for meal types
+        # Calculate card dimensions with proper margins
         day_label_width = 100
-        cards_area_width = WIDTH - day_label_width - 40  # 20px padding each side
-        card_width = (cards_area_width - 24) // 3  # 12px gap between cards
+        right_margin = 15
+        cards_area_width = WIDTH - day_label_width - 40 - right_margin  # 20px left padding, right_margin on right
+        card_gap = 12
+        card_width = (cards_area_width - (card_gap * 2)) // 3  # 2 gaps between 3 cards
         cards_start_x = 20 + day_label_width
         
+        # Draw column headers for meal types - plain text, not pills
         header_y = y_start
         for i, meal_type in enumerate(self.MEALS):
-            meal_color = MEAL_COLORS.get(meal_type, SAGE_LIGHT)
-            card_x = cards_start_x + i * (card_width + 12)
+            card_x = cards_start_x + i * (card_width + card_gap)
             
-            # Pill background for header
-            header_width = self.fonts['small'].size(meal_type)[0] + 24
-            header_rect = pygame.Rect(card_x + (card_width - header_width) // 2, header_y, header_width, 26)
-            pygame.draw.rect(screen, meal_color, header_rect, border_radius=13)
-            
-            header_text = self.fonts['small'].render(meal_type, True, CARD_TEXT)
-            text_x = header_rect.x + (header_width - header_text.get_width()) // 2
-            screen.blit(header_text, (text_x, header_y + 5))
+            header_text = self.fonts['small'].render(meal_type, True, DARK_GRAY)
+            text_x = card_x + (card_width - header_text.get_width()) // 2
+            screen.blit(header_text, (text_x, header_y))
         
-        visible_height = content_bottom - y_start - 40  # Account for header
+        visible_height = content_bottom - y_start - 35  # Account for header
         
         # Calculate content height
         day_block_height = 95
@@ -240,7 +237,7 @@ class MealPrepView:
         
         for day_name in self.DAYS:
             day_data = days_data.get(day_name, {})
-            self._draw_day_block(content_surface, day_name, day_data, y, day_label_width, card_width, cards_start_x)
+            self._draw_day_block(content_surface, day_name, day_data, y, day_label_width, card_width, cards_start_x, card_gap, right_margin)
             y += day_block_height + 10
         
         # Clear week button at bottom - subtle, centered
@@ -250,9 +247,9 @@ class MealPrepView:
         content_surface.blit(clear_text, (clear_rect.x + (clear_rect.width - clear_text.get_width()) // 2, 
                                           clear_rect.y + 10))
         
-        screen.blit(content_surface, (0, y_start + 40), (0, self.scroll_offset, WIDTH, visible_height))
+        screen.blit(content_surface, (0, y_start + 35), (0, self.scroll_offset, WIDTH, visible_height))
     
-    def _draw_day_block(self, surface, day_name, day_data, y, day_label_width, card_width, cards_start_x):
+    def _draw_day_block(self, surface, day_name, day_data, y, day_label_width, card_width, cards_start_x, card_gap, right_margin):
         """Draw a day as a contained block with meal cards inside."""
         block_rect = pygame.Rect(20, y, WIDTH - 40, 95)
         
@@ -283,14 +280,13 @@ class MealPrepView:
         card_y = block_rect.y + (block_rect.height - card_height) // 2
         
         for i, meal_type in enumerate(self.MEALS):
-            # Offset cards_start_x by block position (since we're drawing on content_surface)
-            card_x = cards_start_x + i * (card_width + 12) - 20  # -20 because block starts at x=20
+            card_x = day_label_width + i * (card_width + card_gap)
             meal = meals.get(meal_type)
-            self._draw_meal_card(surface, block_rect.x + card_x, card_y, card_width, card_height, meal_type, meal)
+            self._draw_meal_card(surface, block_rect.x + card_x - 20 + 15, card_y, card_width, card_height, meal_type, meal)
     
     def _draw_meal_card(self, surface, x, y, width, height, meal_type, meal):
         """Draw a single meal card - clean and borderless."""
-        meal_color = MEAL_COLORS.get(meal_type, SAGE_LIGHT)
+        meal_bg_color = MEAL_COLORS.get(meal_type, SAGE_LIGHT)
         
         if meal:
             is_hydrated = meal.get('hydrated', False)
@@ -302,15 +298,13 @@ class MealPrepView:
                 surface.blit(shadow_surface, (x + 2, y + 2))
                 
                 pygame.draw.rect(surface, ACTIVE_CARD_BG, (x, y, width, height), border_radius=12)
-                # Use meal color for text
-                text_color = TEAL
+                text_color = SOFT_BLACK
             else:
-                # Normal card - very light gray, no border
-                pygame.draw.rect(surface, (250, 250, 248), (x, y, width, height), border_radius=12)
-                # Use meal-specific color for text
-                text_color = self._get_meal_text_color(meal_type)
+                # Normal card - meal-type colored background
+                pygame.draw.rect(surface, meal_bg_color, (x, y, width, height), border_radius=12)
+                text_color = CARD_TEXT
             
-            # Recipe name - centered vertically
+            # Recipe name - centered vertically, default gray text
             name = meal.get('name', 'Recipe')
             max_width = width - 24
             
@@ -324,8 +318,9 @@ class MealPrepView:
             text_y = y + (height - name_text.get_height()) // 2
             surface.blit(name_text, (x + 12, text_y))
         else:
-            # Empty slot - subtle dashed appearance
-            pygame.draw.rect(surface, (248, 248, 246), (x, y, width, height), border_radius=12)
+            # Empty slot - very light version of meal color
+            empty_color = self._lighten_color(meal_bg_color, 0.5)
+            pygame.draw.rect(surface, empty_color, (x, y, width, height), border_radius=12)
             
             # "+" icon centered
             plus_color = MID_GRAY
@@ -334,15 +329,12 @@ class MealPrepView:
             pygame.draw.line(surface, plus_color, (cx - 10, cy), (cx + 10, cy), 2)
             pygame.draw.line(surface, plus_color, (cx, cy - 10), (cx, cy + 10), 2)
     
-    def _get_meal_text_color(self, meal_type):
-        """Get a darker, readable version of the meal color for text."""
-        if meal_type == 'Breakfast':
-            return (180, 140, 50)  # Warm gold
-        elif meal_type == 'Lunch':
-            return (80, 130, 80)  # Forest green
-        elif meal_type == 'Dinner':
-            return (160, 120, 90)  # Warm brown
-        return CARD_TEXT
+    def _lighten_color(self, color, amount):
+        """Lighten a color by blending with white."""
+        r = int(color[0] + (255 - color[0]) * amount)
+        g = int(color[1] + (255 - color[1]) * amount)
+        b = int(color[2] + (255 - color[2]) * amount)
+        return (r, g, b)
     
     def _draw_recipe_modal(self, screen):
         """Draw modal to preview/generate recipe."""
@@ -593,7 +585,7 @@ class MealPrepView:
         
         # Clear week button (centered at bottom of grid)
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
-            y_start = 70 + 40  # header area + column headers
+            y_start = 70 + 35  # header area + column headers
             content_y = y - y_start + self.scroll_offset
             day_block_height = 95
             clear_y = len(self.DAYS) * (day_block_height + 10) + 5
@@ -605,14 +597,15 @@ class MealPrepView:
             
         # Meal card taps - updated layout
         if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
-            y_start = 70 + 40
+            y_start = 70 + 35
             content_y = y - y_start + self.scroll_offset
             day_block_height = 95
             
             day_label_width = 100
-            cards_area_width = WIDTH - day_label_width - 40
-            card_width = (cards_area_width - 24) // 3
-            cards_start_x = 20 + day_label_width
+            right_margin = 15
+            cards_area_width = WIDTH - day_label_width - 40 - right_margin
+            card_gap = 12
+            card_width = (cards_area_width - (card_gap * 2)) // 3
             
             for i, day_name in enumerate(self.DAYS):
                 block_y = 8 + i * (day_block_height + 10)
@@ -624,7 +617,7 @@ class MealPrepView:
                     card_y = block_rect.y + (block_rect.height - card_height) // 2
                     
                     for j, meal_type in enumerate(self.MEALS):
-                        card_x = cards_start_x + j * (card_width + 12)
+                        card_x = block_rect.x + day_label_width - 20 + 15 + j * (card_width + card_gap)
                         card_rect = pygame.Rect(card_x, card_y, card_width, card_height)
                         
                         if card_rect.collidepoint(x, content_y):
