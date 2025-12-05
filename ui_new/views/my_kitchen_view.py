@@ -18,6 +18,27 @@ class MyKitchenView:
         self.fonts = fonts
         self.favorites_manager = None
         self.recipes_manager = None
+        self.gradient_surface = None
+    
+    def _create_gradient(self, width, height):
+        """Create a subtle warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        
+        # Soft warm white gradient - matches Home
+        top_color = (255, 251, 245)
+        bottom_color = (252, 245, 235)
+        
+        for y in range(height):
+            t = y / height
+            r = int(top_color[0] + (bottom_color[0] - top_color[0]) * t)
+            g = int(top_color[1] + (bottom_color[1] - top_color[1]) * t)
+            b = int(top_color[2] + (bottom_color[2] - top_color[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
     
     def set_managers(self, favorites_manager, recipes_manager):
         """Set the data managers."""
@@ -25,6 +46,9 @@ class MyKitchenView:
         self.recipes_manager = recipes_manager
     
     def draw(self, screen, state):
+        # Draw gradient background
+        screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
+        
         self._draw_header(screen)
         self._draw_sections(screen)
     
@@ -101,10 +125,10 @@ class MyKitchenView:
     def _draw_section_card(self, screen, section, y):
         card_rect = pygame.Rect(30, y, WIDTH - 60, 90)
         
-        # Card background
-        pygame.draw.rect(screen, LIGHT_GRAY, card_rect, border_radius=16)
+        # Card background - sage light
+        pygame.draw.rect(screen, SAGE_LIGHT, card_rect, border_radius=16)
         
-        # Icon circle
+        # Icon circle (keep original colors)
         icon_x = card_rect.x + 50
         icon_y = card_rect.y + 45
         pygame.draw.circle(screen, section['color'], (icon_x, icon_y), 28)
@@ -120,17 +144,16 @@ class MyKitchenView:
         subtitle = self.fonts['small'].render(section['subtitle'], True, DARK_GRAY)
         screen.blit(subtitle, (card_rect.x + 95, card_rect.y + 52))
         
-        # Chevron
+        # Chevron - teal accent
         chevron_x = card_rect.x + card_rect.width - 40
         chevron_y = card_rect.y + 45
-        pygame.draw.line(screen, MID_GRAY, (chevron_x, chevron_y - 8), (chevron_x + 8, chevron_y), 2)
-        pygame.draw.line(screen, MID_GRAY, (chevron_x + 8, chevron_y), (chevron_x, chevron_y + 8), 2)
+        pygame.draw.line(screen, TEAL, (chevron_x, chevron_y - 8), (chevron_x + 8, chevron_y), 2)
+        pygame.draw.line(screen, TEAL, (chevron_x + 8, chevron_y), (chevron_x, chevron_y + 8), 2)
     
     def _draw_icon(self, screen, icon_type, cx, cy):
         color = WHITE
         
         if icon_type == 'heart':
-            # Simple heart shape using parametric points
             import math
             scale = 0.8
             points = []
@@ -145,26 +168,20 @@ class MyKitchenView:
                 pygame.draw.polygon(screen, color, points)
         
         elif icon_type == 'calendar':
-            # Meal prep container icon
             container_w = 28
             container_h = 20
             left = cx - container_w // 2
             top = cy - container_h // 2
             
-            # Main container
             pygame.draw.rect(screen, color, (left, top, container_w, container_h), border_radius=3)
             
-            # Divider lines (3 compartments)
             pygame.draw.line(screen, (80, 160, 220), (left + container_w // 3, top + 2), 
                            (left + container_w // 3, top + container_h - 2), 2)
             pygame.draw.line(screen, (80, 160, 220), (left + 2 * container_w // 3, top + 2), 
                            (left + 2 * container_w // 3, top + container_h - 2), 2)
-            
-            # Lid line at top
             pygame.draw.line(screen, (80, 160, 220), (left + 2, top + 4), (left + container_w - 2, top + 4), 2)
         
         elif icon_type == 'cart':
-            # Shopping cart
             pygame.draw.line(screen, color, (cx - 12, cy - 10), (cx - 8, cy - 10), 2)
             pygame.draw.line(screen, color, (cx - 8, cy - 10), (cx - 5, cy + 6), 2)
             pygame.draw.line(screen, color, (cx - 5, cy + 6), (cx + 12, cy + 6), 2)
@@ -174,7 +191,6 @@ class MyKitchenView:
             pygame.draw.circle(screen, color, (cx + 9, cy + 12), 4)
         
         elif icon_type == 'sparkle':
-            # AI sparkle icon
             self._draw_sparkle(screen, cx, cy - 2, 12, color)
             self._draw_sparkle(screen, cx + 8, cy - 10, 6, color)
     
@@ -195,9 +211,7 @@ class MyKitchenView:
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos
         
-        # Check section cards
         sections = ['favorites', 'meal_prep', 'grocery_list', 'saved_recipes']
-        
         card_y = 100
         card_height = 90
         card_margin = 15

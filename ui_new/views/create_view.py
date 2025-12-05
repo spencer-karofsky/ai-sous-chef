@@ -14,8 +14,32 @@ from ui_new.constants import *
 class CreateView:
     def __init__(self, fonts):
         self.fonts = fonts
+        self.gradient_surface = None
+    
+    def _create_gradient(self, width, height):
+        """Create a subtle warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        
+        # Soft warm white gradient - matches Home
+        top_color = (255, 251, 245)
+        bottom_color = (252, 245, 235)
+        
+        for y in range(height):
+            t = y / height
+            r = int(top_color[0] + (bottom_color[0] - top_color[0]) * t)
+            g = int(top_color[1] + (bottom_color[1] - top_color[1]) * t)
+            b = int(top_color[2] + (bottom_color[2] - top_color[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
     
     def draw(self, screen, state, keyboard_visible):
+        # Draw gradient background
+        screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
+        
         content_bottom = HEIGHT - NAV_HEIGHT
         if keyboard_visible:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
@@ -35,8 +59,10 @@ class CreateView:
     def _draw_prompt_area(self, screen, state):
         y = 110
         
+        # Prompt input area - white with sage border
         area_rect = pygame.Rect(40, y, WIDTH - 80, 120)
-        pygame.draw.rect(screen, LIGHT_GRAY, area_rect, border_radius=16)
+        pygame.draw.rect(screen, WHITE, area_rect, border_radius=16)
+        pygame.draw.rect(screen, SAGE, area_rect, 1, border_radius=16)
         
         text_x = area_rect.x + 25
         text_y = area_rect.y + 20
@@ -68,21 +94,22 @@ class CreateView:
                 cursor_y = text_y + (len(lines) - 1) * 32
                 pygame.draw.rect(screen, SOFT_BLACK, (cursor_x, cursor_y, 2, 28))
         else:
-            placeholder = self.fonts['body'].render("Describe what you'd like to cook...", True, MID_GRAY)
+            placeholder = self.fonts['body'].render("Describe what you'd like to cook...", True, DARK_GRAY)
             screen.blit(placeholder, (text_x, text_y))
             
-            hint = self.fonts['small'].render("e.g., 'healthy chicken dinner under 500 calories'", True, MID_GRAY)
+            hint = self.fonts['small'].render("e.g., 'healthy chicken dinner under 500 calories'", True, DARK_GRAY)
             screen.blit(hint, (text_x, text_y + 40))
         
+        # Generate button - teal when active
         btn_y = y + 140
         btn_rect = pygame.Rect(40, btn_y, WIDTH - 80, 56)
         
         if state['create_text']:
-            pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12)
+            pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
             btn_text = self.fonts['body'].render("Generate Recipe", True, WHITE)
         else:
-            pygame.draw.rect(screen, LIGHT_GRAY, btn_rect, border_radius=12)
-            btn_text = self.fonts['body'].render("Generate Recipe", True, MID_GRAY)
+            pygame.draw.rect(screen, SAGE_LIGHT, btn_rect, border_radius=12)
+            btn_text = self.fonts['body'].render("Generate Recipe", True, DARK_GRAY)
         
         screen.blit(btn_text, (btn_rect.x + btn_rect.width // 2 - btn_text.get_width() // 2, btn_rect.y + 14))
         
@@ -120,10 +147,10 @@ class CreateView:
                 break
             
             chip_rect = pygame.Rect(chip_x, chip_y, chip_width, 40)
-            pygame.draw.rect(screen, WHITE, chip_rect, border_radius=20)
-            pygame.draw.rect(screen, DIVIDER, chip_rect, 1, border_radius=20)
+            pygame.draw.rect(screen, SAGE_LIGHT, chip_rect, border_radius=20)
+            pygame.draw.rect(screen, SAGE, chip_rect, 1, border_radius=20)
             
-            chip_text = self.fonts['small'].render(suggestion, True, CHARCOAL)
+            chip_text = self.fonts['small'].render(suggestion, True, SOFT_BLACK)
             screen.blit(chip_text, (chip_x + 15, chip_y + 10))
             
             chip_x += chip_width + 12

@@ -14,8 +14,32 @@ from ui_new.constants import *
 class SearchView:
     def __init__(self, fonts):
         self.fonts = fonts
+        self.gradient_surface = None
+    
+    def _create_gradient(self, width, height):
+        """Create a subtle warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        
+        # Soft warm white gradient - matches Home
+        top_color = (255, 251, 245)
+        bottom_color = (252, 245, 235)
+        
+        for y in range(height):
+            t = y / height
+            r = int(top_color[0] + (bottom_color[0] - top_color[0]) * t)
+            g = int(top_color[1] + (bottom_color[1] - top_color[1]) * t)
+            b = int(top_color[2] + (bottom_color[2] - top_color[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
     
     def draw(self, screen, state, keyboard_visible):
+        # Draw gradient background
+        screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
+        
         content_bottom = HEIGHT - NAV_HEIGHT
         if keyboard_visible:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
@@ -33,7 +57,8 @@ class SearchView:
         y = 80
         
         search_rect = pygame.Rect(40, y, WIDTH - 80, 56)
-        pygame.draw.rect(screen, LIGHT_GRAY, search_rect, border_radius=12)
+        pygame.draw.rect(screen, WHITE, search_rect, border_radius=12)
+        pygame.draw.rect(screen, SAGE, search_rect, 1, border_radius=12)
         
         icon_x = search_rect.x + 20
         icon_y = search_rect.y + 16
@@ -44,7 +69,7 @@ class SearchView:
         if state['search_text']:
             text = self.fonts['body'].render(state['search_text'][-35:], True, SOFT_BLACK)
         else:
-            text = self.fonts['body'].render("Search recipes...", True, MID_GRAY)
+            text = self.fonts['body'].render("Search recipes...", True, DARK_GRAY)
         screen.blit(text, (text_x, y + 14))
         
         if state['active_input'] == 'search' and pygame.time.get_ticks() % 1000 < 500:
@@ -53,7 +78,7 @@ class SearchView:
         
         if state['search_text']:
             btn_rect = pygame.Rect(WIDTH - 140, y, 90, 56)
-            pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12)
+            pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
             btn_text = self.fonts['small'].render("Search", True, WHITE)
             screen.blit(btn_text, (btn_rect.x + 15, btn_rect.y + 17))
         
@@ -79,24 +104,24 @@ class SearchView:
         y = HEIGHT // 2 - 60
         
         cx = WIDTH // 2
-        pygame.draw.circle(screen, LIGHT_GRAY, (cx, y), 40, 3)
-        pygame.draw.circle(screen, LIGHT_GRAY, (cx - 8, y - 5), 15, 2)
-        pygame.draw.line(screen, LIGHT_GRAY, (cx + 3, y + 7), (cx + 18, y + 22), 3)
+        pygame.draw.circle(screen, SAGE, (cx, y), 40, 3)
+        pygame.draw.circle(screen, SAGE, (cx - 8, y - 5), 15, 2)
+        pygame.draw.line(screen, SAGE, (cx + 3, y + 7), (cx + 18, y + 22), 3)
         
-        text = self.fonts['body'].render("Search for recipes", True, DARK_GRAY)
+        text = self.fonts['body'].render("Search for recipes", True, SOFT_BLACK)
         screen.blit(text, (cx - text.get_width() // 2, y + 60))
         
-        hint = self.fonts['small'].render("Try 'pasta' or 'quick dinner'", True, MID_GRAY)
+        hint = self.fonts['small'].render("Try 'pasta' or 'quick dinner'", True, DARK_GRAY)
         screen.blit(hint, (cx - hint.get_width() // 2, y + 95))
     
     def _draw_recipe_card(self, screen, recipe, index, y):
         card_rect = pygame.Rect(40, y, WIDTH - 80, 90)
         
         pygame.draw.rect(screen, WHITE, card_rect, border_radius=12)
-        pygame.draw.rect(screen, DIVIDER, card_rect, 1, border_radius=12)
+        pygame.draw.rect(screen, SAGE, card_rect, 1, border_radius=12)
         
         num_x = card_rect.x + 25
-        num_text = self.fonts['header'].render(f"{index + 1}", True, MID_GRAY)
+        num_text = self.fonts['header'].render(f"{index + 1}", True, SAGE)
         screen.blit(num_text, (num_x, card_rect.y + 28))
         
         name = recipe.get('name', 'Untitled')
@@ -118,8 +143,8 @@ class SearchView:
         
         arrow_x = card_rect.x + card_rect.width - 35
         arrow_y = card_rect.y + 40
-        pygame.draw.line(screen, MID_GRAY, (arrow_x, arrow_y - 8), (arrow_x + 8, arrow_y), 2)
-        pygame.draw.line(screen, MID_GRAY, (arrow_x + 8, arrow_y), (arrow_x, arrow_y + 8), 2)
+        pygame.draw.line(screen, TEAL, (arrow_x, arrow_y - 8), (arrow_x + 8, arrow_y), 2)
+        pygame.draw.line(screen, TEAL, (arrow_x + 8, arrow_y), (arrow_x, arrow_y + 8), 2)
     
     def handle_touch(self, pos, state, keyboard_visible):
         x, y = pos

@@ -76,8 +76,10 @@ class TouchKeyboard:
         if not self.visible:
             return
 
-        pygame.draw.rect(self.screen, WHITE, (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT + 10))
-        pygame.draw.line(self.screen, DIVIDER, (0, self.y_offset), (WIDTH, self.y_offset), 1)
+        # Warm cream background matching app palette
+        pygame.draw.rect(self.screen, (252, 245, 235), (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT + 10))
+        # Sage top border
+        pygame.draw.line(self.screen, SAGE, (0, self.y_offset), (WIDTH, self.y_offset), 1)
 
         y = self.y_offset + 12
         current_time = pygame.time.get_ticks()
@@ -94,10 +96,13 @@ class TouchKeyboard:
                 key_rect = pygame.Rect(x, y, KEY_WIDTH, KEY_HEIGHT)
                 
                 if is_pressed:
-                    pygame.draw.rect(self.screen, SOFT_BLACK, key_rect, border_radius=8)
+                    # Pressed state: teal background
+                    pygame.draw.rect(self.screen, TEAL, key_rect, border_radius=8)
                     label = self.font.render(display_key, True, WHITE)
                 else:
-                    pygame.draw.rect(self.screen, LIGHT_GRAY, key_rect, border_radius=8)
+                    # Normal state: white with sage border
+                    pygame.draw.rect(self.screen, WHITE, key_rect, border_radius=8)
+                    pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=8, width=1)
                     label = self.font.render(display_key, True, SOFT_BLACK)
 
                 label_x = x + (KEY_WIDTH - label.get_width()) // 2
@@ -120,19 +125,27 @@ class TouchKeyboard:
             key_rect = pygame.Rect(x, y, width, KEY_HEIGHT)
             
             if label == 'Go':
-                bg_color = SOFT_BLACK
+                # Go button: teal (primary action)
+                bg_color = TEAL
                 text_color = WHITE
             elif is_pressed:
-                bg_color = SOFT_BLACK
+                # Pressed state: teal
+                bg_color = TEAL
                 text_color = WHITE
             elif label == 'Shift' and self.shift:
-                bg_color = CHARCOAL
+                # Shift active: sage (darker)
+                bg_color = SAGE
                 text_color = WHITE
             else:
-                bg_color = LIGHT_GRAY
+                # Normal special keys: sage light with sage border
+                bg_color = SAGE_LIGHT
                 text_color = SOFT_BLACK
             
             pygame.draw.rect(self.screen, bg_color, key_rect, border_radius=8)
+            
+            # Add border for non-filled buttons
+            if bg_color == SAGE_LIGHT:
+                pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=8, width=1)
             
             if label == 'DELETE':
                 self._draw_backspace_icon(x, y, width, text_color)

@@ -16,7 +16,7 @@ from ui_new.constants import *
 class SettingsView:
     def __init__(self, fonts, config):
         self.fonts = fonts
-        self.config = config  # Use passed-in config instead of creating new one
+        self.config = config
         self.scroll_offset = 0
         self.max_scroll = 0
         
@@ -106,29 +106,34 @@ class SettingsView:
         height = 20
         for section in self.sections:
             height += 50
-            height += len(section['items']) * 70
+            for item in section['items']:
+                height += 85 if item.get('subtitle') else 70
             height += 20
         return height + 40
     
     def _draw_section(self, surface, section, y):
+        # Section title in dark gray
         title = self.fonts['small'].render(section['title'].upper(), True, DARK_GRAY)
         surface.blit(title, (40, y))
         y += 35
         
-        card_height = len(section['items']) * 70 - 10
+        # Calculate card height based on items with/without subtitles
+        card_height = sum(85 if item.get('subtitle') else 70 for item in section['items']) - 10
         card_rect = pygame.Rect(30, y, WIDTH - 60, card_height)
-        pygame.draw.rect(surface, LIGHT_GRAY, card_rect, border_radius=12)
+        pygame.draw.rect(surface, SAGE_LIGHT, card_rect, border_radius=12)
         
         item_y = y + 5
         for i, item in enumerate(section['items']):
-            self._draw_item(surface, item, item_y, i == len(section['items']) - 1)
-            item_y += 70
+            item_height = 85 if item.get('subtitle') else 70
+            self._draw_item(surface, item, item_y, i == len(section['items']) - 1, item_height)
+            item_y += item_height
         
         return y + card_height + 25
     
-    def _draw_item(self, surface, item, y, is_last):
+    def _draw_item(self, surface, item, y, is_last, item_height=70):
         x = 50
         
+        # Danger items in red, others in soft black
         if item.get('type') == 'danger':
             label_color = (200, 60, 60)
         else:
@@ -143,15 +148,20 @@ class SettingsView:
         
         right_x = WIDTH - 80
         
+        # Vertically center controls based on item height
+        center_y = y + (item_height // 2)
+        
         if item['type'] == 'action':
+            # Chevron in teal
             chevron_x = right_x
-            chevron_y = y + 25
-            pygame.draw.line(surface, MID_GRAY, (chevron_x, chevron_y - 6), (chevron_x + 6, chevron_y), 2)
-            pygame.draw.line(surface, MID_GRAY, (chevron_x + 6, chevron_y), (chevron_x, chevron_y + 6), 2)
+            chevron_y = center_y
+            pygame.draw.line(surface, TEAL, (chevron_x, chevron_y - 6), (chevron_x + 6, chevron_y), 2)
+            pygame.draw.line(surface, TEAL, (chevron_x + 6, chevron_y), (chevron_x, chevron_y + 6), 2)
         
         elif item['type'] == 'danger':
+            # Danger chevron in red
             chevron_x = right_x
-            chevron_y = y + 25
+            chevron_y = center_y
             pygame.draw.line(surface, (200, 60, 60), (chevron_x, chevron_y - 6), (chevron_x + 6, chevron_y), 2)
             pygame.draw.line(surface, (200, 60, 60), (chevron_x + 6, chevron_y), (chevron_x, chevron_y + 6), 2)
         
@@ -161,44 +171,52 @@ class SettingsView:
             
             toggle_width = 100
             toggle_x = right_x - toggle_width + 20
-            toggle_y = y + 15
+            toggle_y = center_y - 16
             
-            pygame.draw.rect(surface, DIVIDER, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
+            # Toggle track in sage light
+            pygame.draw.rect(surface, SAGE_LIGHT, (toggle_x, toggle_y, toggle_width, 32), border_radius=16)
+            pygame.draw.rect(surface, SAGE, (toggle_x, toggle_y, toggle_width, 32), border_radius=16, width=1)
             
+            # Selected option pill in teal
             option_width = toggle_width // 2
             selected_x = toggle_x + (current * option_width)
-            pygame.draw.rect(surface, SOFT_BLACK, (selected_x + 2, toggle_y + 2, option_width - 4, 28), border_radius=14)
+            pygame.draw.rect(surface, TEAL, (selected_x + 2, toggle_y + 2, option_width - 4, 28), border_radius=14)
             
             for i, opt in enumerate(options):
                 opt_x = toggle_x + (i * option_width) + option_width // 2
-                opt_color = WHITE if i == current else DARK_GRAY
+                opt_color = WHITE if i == current else SOFT_BLACK
                 opt_text = self.fonts['caption'].render(opt, True, opt_color)
                 surface.blit(opt_text, (opt_x - opt_text.get_width() // 2, toggle_y + 8))
         
         elif item['type'] == 'slider':
             slider_width = 150
             slider_x = right_x - slider_width + 20
-            slider_y = y + 23
+            slider_y = center_y
             value = item.get('value', 50)
             
             item['_slider_rect'] = (slider_x, slider_y - 15, slider_width, 30)
             
-            pygame.draw.rect(surface, DIVIDER, (slider_x, slider_y, slider_width, 6), border_radius=3)
+            # Slider track in sage
+            pygame.draw.rect(surface, SAGE, (slider_x, slider_y, slider_width, 6), border_radius=3)
             
+            # Filled portion in teal
             fill_width = int(slider_width * value / 100)
             if fill_width > 0:
-                pygame.draw.rect(surface, SOFT_BLACK, (slider_x, slider_y, fill_width, 6), border_radius=3)
+                pygame.draw.rect(surface, TEAL, (slider_x, slider_y, fill_width, 6), border_radius=3)
             
+            # Knob with teal fill and white center
             knob_x = slider_x + fill_width
-            pygame.draw.circle(surface, SOFT_BLACK, (knob_x, slider_y + 3), 10)
+            pygame.draw.circle(surface, TEAL, (knob_x, slider_y + 3), 10)
             pygame.draw.circle(surface, WHITE, (knob_x, slider_y + 3), 6)
         
+        # Divider line in sage
         if not is_last:
-            pygame.draw.line(surface, DIVIDER, (x, y + 60), (WIDTH - 50, y + 60), 1)
+            pygame.draw.line(surface, SAGE, (x, y + item_height - 10), (WIDTH - 50, y + item_height - 10), 1)
         
-        return y + 70
+        return y + item_height
     
     def _draw_modal(self, screen):
+        # Dark overlay
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
@@ -208,6 +226,7 @@ class SettingsView:
         modal_x = (WIDTH - modal_width) // 2
         modal_y = (HEIGHT - modal_height) // 2
         
+        # Modal background
         pygame.draw.rect(screen, WHITE, (modal_x, modal_y, modal_width, modal_height), border_radius=16)
         
         if self.modal == 'system_info':
@@ -271,7 +290,8 @@ class SettingsView:
                 hint = self.fonts['caption'].render("Restart the app to apply updates", True, MID_GRAY)
                 screen.blit(hint, (x + 30, y + h - 100))
         
-        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", SOFT_BLACK)
+        # Close button in teal
+        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", TEAL)
     
     def _do_git_pull(self):
         """Run git pull to update the app."""
@@ -319,7 +339,8 @@ class SettingsView:
             screen.blit(val_text, (x + 180, info_y))
             info_y += 40
         
-        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", SOFT_BLACK)
+        # Close button in teal
+        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", TEAL)
     
     def _draw_network_modal(self, screen, x, y, w, h):
         title = self.fonts['header'].render("Network Status", True, SOFT_BLACK)
@@ -349,7 +370,8 @@ class SettingsView:
             screen.blit(label, (x + 30, info_y))
             screen.blit(value, (x + 180, info_y))
         
-        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", SOFT_BLACK)
+        # Close button in teal
+        self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Close", TEAL)
     
     def _draw_confirm_modal(self, screen, x, y, w, h, title_text, message):
         title = self.fonts['header'].render(title_text, True, SOFT_BLACK)
@@ -374,7 +396,9 @@ class SettingsView:
             screen.blit(text, (x + 30, msg_y))
             msg_y += 35
         
-        self._draw_modal_button(screen, x + 30, y + h - 60, 100, 40, "Cancel", LIGHT_GRAY, SOFT_BLACK)
+        # Cancel button in sage light with soft black text
+        self._draw_modal_button(screen, x + 30, y + h - 60, 100, 40, "Cancel", SAGE_LIGHT, SOFT_BLACK)
+        # Confirm button in red
         self._draw_modal_button(screen, x + w - 130, y + h - 60, 100, 40, "Confirm", (200, 60, 60), WHITE)
     
     def _draw_modal_button(self, screen, x, y, w, h, text, bg_color, text_color=None):
@@ -398,9 +422,10 @@ class SettingsView:
             item_y += 5
             
             for item in section['items']:
-                if 30 <= x <= WIDTH - 30 and item_y <= content_y <= item_y + 60:
+                item_height = 85 if item.get('subtitle') else 70
+                if 30 <= x <= WIDTH - 30 and item_y <= content_y <= item_y + item_height - 10:
                     return self._handle_item_tap(item, x, content_y - item_y)
-                item_y += 70
+                item_y += item_height
             
             item_y += 20
         

@@ -16,11 +16,11 @@ class Config:
     """Manages app configuration and preferences."""
     
     DEFAULT_CONFIG = {
-        'units': 'US',  # 'US' or 'Metric'
-        'skill_level': 'Beginner',  # 'Beginner', 'Intermediate', 'Advanced'
-        'dietary': [],  # ['vegan', 'gluten-free', etc.]
-        'exclusions': [],  # ['peanuts', 'shellfish', etc.]
-        'brightness': 80,  # 0-100
+        'units': 'US',
+        'skill_level': 'Beginner',
+        'dietary': [],
+        'exclusions': [],
+        'brightness': 80,
     }
     
     def __init__(self):
