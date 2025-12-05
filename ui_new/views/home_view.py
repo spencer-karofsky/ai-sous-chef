@@ -34,7 +34,30 @@ class HomeView:
         # Sleep state
         self.is_sleeping = False
         self.last_activity_ticks = pygame.time.get_ticks()
-        self.sleep_timeout = 60000 # 30 seconds
+        self.sleep_timeout = 60000
+        
+        # Pre-render gradient background
+        self.gradient_surface = None
+
+    def _create_gradient(self, width, height):
+        """Create a subtle warm gradient background."""
+        if self.gradient_surface and self.gradient_surface.get_size() == (width, height):
+            return self.gradient_surface
+        
+        self.gradient_surface = pygame.Surface((width, height))
+        
+        # Subtle warm gradient: off-white to very light warm gray
+        top_color = (252, 251, 250)      # Warm off-white
+        bottom_color = (245, 243, 240)   # Slightly warmer/darker
+        
+        for y in range(height):
+            t = y / height
+            r = int(top_color[0] + (bottom_color[0] - top_color[0]) * t)
+            g = int(top_color[1] + (bottom_color[1] - top_color[1]) * t)
+            b = int(top_color[2] + (bottom_color[2] - top_color[2]) * t)
+            pygame.draw.line(self.gradient_surface, (r, g, b), (0, y), (width, y))
+        
+        return self.gradient_surface
 
     def wake(self):
         """Wake from sleep."""
@@ -46,15 +69,11 @@ class HomeView:
         self.last_activity_ticks = pygame.time.get_ticks()
 
     def draw(self, screen, state):
-        # Debug - remove after fixing
         elapsed = pygame.time.get_ticks() - self.last_activity_ticks
-        if elapsed % 5000 < 50:  # Print every ~5 seconds
-            print(f"[Home] Elapsed: {elapsed // 1000}s, Sleeping: {self.is_sleeping}, Timeout: {self.sleep_timeout // 1000}s")
         
         # Check for sleep
         if not self.is_sleeping and not self.timer_active and not self.timer_done and not self.show_timer_modal:
             if elapsed > self.sleep_timeout:
-                print("[Home] Going to sleep!")
                 self.is_sleeping = True
         
         # Draw sleep screen
@@ -70,9 +89,13 @@ class HomeView:
                 self.last_flash_ticks = ticks
             if self.flash_on:
                 screen.fill((255, 60, 60))
+            else:
+                screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
+        else:
+            # Draw gradient background
+            screen.blit(self._create_gradient(WIDTH, HEIGHT), (0, 0))
         
         self._draw_header(screen)
-        self._draw_clock_box(screen)
         self._draw_quick_actions(screen)
         self._draw_todays_meals(screen)
         
@@ -87,53 +110,40 @@ class HomeView:
 
     def _draw_sleep_screen(self, screen):
         """Draw minimal sleep screen with analog clock only."""
-        screen.fill((15, 15, 20))  # Very dark background
+        screen.fill((15, 15, 20))
         
         now = datetime.now()
-        
-        # Clock center and size
         cx, cy = WIDTH // 2, HEIGHT // 2
         radius = 150
         
-        # Clock face
         pygame.draw.circle(screen, (30, 30, 35), (cx, cy), radius)
         pygame.draw.circle(screen, (50, 50, 55), (cx, cy), radius, 3)
         
-        # Hour markers
         for i in range(12):
-            angle = i * 30 - 90  # Start at 12 o'clock
-            
-            # Outer point
+            angle = i * 30 - 90
             outer_x = cx + int((radius - 15) * pygame.math.Vector2(1, 0).rotate(angle).x)
             outer_y = cy + int((radius - 15) * pygame.math.Vector2(1, 0).rotate(angle).y)
-            
-            # Inner point
-            inner_len = 25 if i % 3 == 0 else 12  # Longer marks at 12, 3, 6, 9
+            inner_len = 25 if i % 3 == 0 else 12
             inner_x = cx + int((radius - 15 - inner_len) * pygame.math.Vector2(1, 0).rotate(angle).x)
             inner_y = cy + int((radius - 15 - inner_len) * pygame.math.Vector2(1, 0).rotate(angle).y)
-            
             thickness = 3 if i % 3 == 0 else 2
             pygame.draw.line(screen, (80, 80, 90), (inner_x, inner_y), (outer_x, outer_y), thickness)
         
-        # Calculate hand angles
         hour = now.hour % 12
         minute = now.minute
         
-        # Hour hand
         hour_angle = (hour + minute / 60) * 30 - 90
         hour_length = radius * 0.5
         hour_x = cx + int(hour_length * pygame.math.Vector2(1, 0).rotate(hour_angle).x)
         hour_y = cy + int(hour_length * pygame.math.Vector2(1, 0).rotate(hour_angle).y)
         pygame.draw.line(screen, (180, 180, 190), (cx, cy), (hour_x, hour_y), 6)
         
-        # Minute hand
         min_angle = minute * 6 - 90
         min_length = radius * 0.75
         min_x = cx + int(min_length * pygame.math.Vector2(1, 0).rotate(min_angle).x)
         min_y = cy + int(min_length * pygame.math.Vector2(1, 0).rotate(min_angle).y)
         pygame.draw.line(screen, (150, 150, 160), (cx, cy), (min_x, min_y), 4)
         
-        # Center cap
         pygame.draw.circle(screen, (100, 100, 110), (cx, cy), 8)
     
     def set_managers(self, meal_plan_manager=None, favorites_manager=None, saved_recipes_manager=None):
@@ -142,95 +152,85 @@ class HomeView:
         self.saved_recipes_manager = saved_recipes_manager
     
     def _draw_header(self, screen):
-        title = self.fonts['title'].render("AI Sous Chef", True, SOFT_BLACK)
-        screen.blit(title, (40, 25))
+        """Header row - title left, clock right, vertically aligned."""
+        header_y = 25
         
-        subtitle = self.fonts['body'].render("Find a recipe or create something new", True, DARK_GRAY)
-        screen.blit(subtitle, (40, 75))
-    
-    def _draw_clock_box(self, screen):
-        """Clock box in top right - tap for timer."""
+        # Title and subtitle on left
+        title = self.fonts['title'].render("AI Sous Chef", True, SOFT_BLACK)
+        screen.blit(title, (40, header_y))
+        
+        subtitle = self.fonts['small'].render("Find a recipe or create something new", True, DARK_GRAY)
+        screen.blit(subtitle, (40, header_y + 50))
+        
+        # Clock box on right - aligned with title
         now = datetime.now()
         time_str = now.strftime("%I:%M").lstrip("0")
         ampm = now.strftime("%p")
         
-        # Bigger box
-        clock_rect = pygame.Rect(WIDTH - 180, 20, 140, 65)
+        clock_rect = pygame.Rect(WIDTH - 180, header_y, 140, 65)
         pygame.draw.rect(screen, LIGHT_GRAY, clock_rect, border_radius=12)
         
-        # Time
         time_text = self.fonts['header'].render(time_str, True, SOFT_BLACK)
         screen.blit(time_text, (clock_rect.x + 18, clock_rect.y + 10))
         
-        # AM/PM
         ampm_text = self.fonts['small'].render(ampm, True, DARK_GRAY)
         screen.blit(ampm_text, (clock_rect.x + 18 + time_text.get_width() + 5, clock_rect.y + 18))
         
-        # Date below
         date_str = now.strftime("%a, %b %d")
         date_text = self.fonts['small'].render(date_str, True, DARK_GRAY)
         screen.blit(date_text, (clock_rect.x + 18, clock_rect.y + 40))
     
     def _draw_quick_actions(self, screen):
-        y = 130
+        """Search and Create cards."""
+        y = 110
         card_width = (WIDTH - 100) // 2
-        card_height = 180
+        card_height = 160
         
         # Search card
         search_rect = pygame.Rect(40, y, card_width, card_height)
         pygame.draw.rect(screen, LIGHT_GRAY, search_rect, border_radius=16)
         
         search_title = self.fonts['header'].render("Search", True, SOFT_BLACK)
-        screen.blit(search_title, (search_rect.x + 30, search_rect.y + 30))
+        screen.blit(search_title, (search_rect.x + 25, search_rect.y + 22))
         
         search_desc = self.fonts['small'].render("Find recipes from", True, DARK_GRAY)
-        screen.blit(search_desc, (search_rect.x + 30, search_rect.y + 75))
+        screen.blit(search_desc, (search_rect.x + 25, search_rect.y + 62))
         search_desc2 = self.fonts['small'].render("our collection", True, DARK_GRAY)
-        screen.blit(search_desc2, (search_rect.x + 30, search_rect.y + 100))
+        screen.blit(search_desc2, (search_rect.x + 25, search_rect.y + 86))
         
-        self._draw_search_icon(screen, search_rect.x + card_width - 80, search_rect.y + card_height - 70)
+        self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65)
         
         # Create card
         create_rect = pygame.Rect(60 + card_width, y, card_width, card_height)
         pygame.draw.rect(screen, SOFT_BLACK, create_rect, border_radius=16)
         
         create_title = self.fonts['header'].render("Create", True, WHITE)
-        screen.blit(create_title, (create_rect.x + 30, create_rect.y + 30))
+        screen.blit(create_title, (create_rect.x + 25, create_rect.y + 22))
         
         create_desc = self.fonts['small'].render("Generate a custom", True, MID_GRAY)
-        screen.blit(create_desc, (create_rect.x + 30, create_rect.y + 75))
+        screen.blit(create_desc, (create_rect.x + 25, create_rect.y + 62))
         create_desc2 = self.fonts['small'].render("recipe with AI", True, MID_GRAY)
-        screen.blit(create_desc2, (create_rect.x + 30, create_rect.y + 100))
+        screen.blit(create_desc2, (create_rect.x + 25, create_rect.y + 86))
         
-        self._draw_sparkles_icon(screen, create_rect.x + card_width - 90, create_rect.y + card_height - 80, WHITE)
+        self._draw_sparkles_icon(screen, create_rect.x + card_width - 85, create_rect.y + card_height - 75, WHITE)
     
     def _draw_todays_meals(self, screen):
-        """Today's meals as a single box."""
-        y = 330
+        """Today's meals section - more spacious layout."""
+        y = 290
+        box_height = 170
         
-        # Section box
-        box_rect = pygame.Rect(40, y, WIDTH - 80, 130)
+        box_rect = pygame.Rect(40, y, WIDTH - 80, box_height)
         pygame.draw.rect(screen, LIGHT_GRAY, box_rect, border_radius=16)
         
-        # Title
+        # Title row
         today = datetime.now().strftime("%A")
         title = self.fonts['body'].render("Today's Meals", True, SOFT_BLACK)
-        screen.blit(title, (box_rect.x + 25, box_rect.y + 18))
+        screen.blit(title, (box_rect.x + 25, box_rect.y + 20))
         
         day_text = self.fonts['caption'].render(today, True, DARK_GRAY)
-        screen.blit(day_text, (box_rect.x + 25 + title.get_width() + 10, box_rect.y + 22))
+        screen.blit(day_text, (box_rect.x + 25 + title.get_width() + 12, box_rect.y + 24))
         
-        # Debug - remove after fixing
-        if self.meal_plan_manager:
-            print(f"[Home] Today: {today}")
-            print(f"[Home] Meal count: {self.meal_plan_manager.get_meal_count()}")
-            day_data = self.meal_plan_manager.get_day(today)
-            print(f"[Home] Day data keys: {day_data.keys() if day_data else None}")
-            if day_data:
-                meals = day_data.get('meals', {})
-                print(f"[Home] Meals: {list(meals.keys())} -> {[bool(m) for m in meals.values()]}")
-        
-        # Check if we have meals for today
+        # Check if we have meals
         has_meals = False
         day_data = None
         
@@ -245,68 +245,73 @@ class HomeView:
         
         if has_meals and day_data:
             meals = day_data.get('meals', {})
-            slot_width = (box_rect.width - 70) // 3
+            
+            # Three meal slots with more padding
+            slot_width = (box_rect.width - 80) // 3
+            slot_height = 85
             slot_x = box_rect.x + 25
-            slot_y = box_rect.y + 55
+            slot_y = box_rect.y + 60
             
             for meal_type in ['Breakfast', 'Lunch', 'Dinner']:
                 meal = meals.get(meal_type)
-                self._draw_meal_slot(screen, slot_x, slot_y, slot_width - 10, 55, meal_type, meal)
-                slot_x += slot_width
+                self._draw_meal_slot(screen, slot_x, slot_y, slot_width, slot_height, meal_type, meal)
+                slot_x += slot_width + 15
         else:
             self._draw_no_meals(screen, box_rect)
     
     def _draw_meal_slot(self, screen, x, y, width, height, meal_type, meal):
+        """Individual meal slot with better spacing."""
         slot_rect = pygame.Rect(x, y, width, height)
         
         if meal:
             is_hydrated = meal.get('hydrated', False)
             
             if is_hydrated:
-                pygame.draw.rect(screen, SOFT_BLACK, slot_rect, border_radius=10)
+                pygame.draw.rect(screen, SOFT_BLACK, slot_rect, border_radius=12)
                 text_color = WHITE
                 sub_color = MID_GRAY
             else:
-                pygame.draw.rect(screen, WHITE, slot_rect, border_radius=10)
+                pygame.draw.rect(screen, WHITE, slot_rect, border_radius=12)
                 text_color = SOFT_BLACK
                 sub_color = DARK_GRAY
             
-            # Meal type
+            # Meal type label
             type_text = self.fonts['caption'].render(meal_type, True, sub_color)
-            screen.blit(type_text, (x + 10, y + 8))
+            screen.blit(type_text, (x + 15, y + 12))
             
-            # Recipe name
+            # Recipe name (with truncation)
             name = meal.get('name', 'Recipe')
-            max_width = width - 20
-            if self.fonts['small'].size(name)[0] > max_width:
-                while self.fonts['small'].size(name + '...')[0] > max_width and len(name) > 3:
+            max_width = width - 30
+            if self.fonts['body'].size(name)[0] > max_width:
+                while self.fonts['body'].size(name + '...')[0] > max_width and len(name) > 3:
                     name = name[:-1]
                 name += '...'
             
-            name_text = self.fonts['small'].render(name, True, text_color)
-            screen.blit(name_text, (x + 10, y + 28))
+            name_text = self.fonts['body'].render(name, True, text_color)
+            screen.blit(name_text, (x + 15, y + 38))
         else:
-            pygame.draw.rect(screen, WHITE, slot_rect, border_radius=10)
+            pygame.draw.rect(screen, WHITE, slot_rect, border_radius=12)
             
             type_text = self.fonts['caption'].render(meal_type, True, DARK_GRAY)
-            screen.blit(type_text, (x + 10, y + 8))
+            screen.blit(type_text, (x + 15, y + 12))
             
-            empty_text = self.fonts['small'].render("—", True, MID_GRAY)
-            screen.blit(empty_text, (x + 10, y + 28))
+            empty_text = self.fonts['body'].render("—", True, MID_GRAY)
+            screen.blit(empty_text, (x + 15, y + 38))
     
     def _draw_no_meals(self, screen, box_rect):
-        """Draw prompt to plan meals - tappable."""
-        msg = self.fonts['body'].render("No meals planned", True, DARK_GRAY)
-        screen.blit(msg, (box_rect.x + 25, box_rect.y + 55))
+        """Empty state with button."""
+        center_y = box_rect.y + box_rect.height // 2
         
-        # Tappable button
-        btn_rect = pygame.Rect(box_rect.x + 25, box_rect.y + 85, 180, 35)
-        pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=8)
+        msg = self.fonts['body'].render("No meals planned for today", True, DARK_GRAY)
+        screen.blit(msg, (box_rect.x + 25, center_y - 25))
+        
+        btn_rect = pygame.Rect(box_rect.x + 25, center_y + 10, 180, 40)
+        pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=10)
         btn_text = self.fonts['small'].render("Plan Your Week", True, WHITE)
-        screen.blit(btn_text, (btn_rect.x + 15, btn_rect.y + 8))
+        screen.blit(btn_text, (btn_rect.x + 20, btn_rect.y + 10))
     
     def _draw_timer_pill(self, screen):
-        """Active timer display with cancel button."""
+        """Active timer display."""
         elapsed = (pygame.time.get_ticks() - self.timer_start_ticks) // 1000
         remaining = max(0, self.timer_duration - elapsed)
         
@@ -320,15 +325,12 @@ class HomeView:
         secs = remaining % 60
         time_str = f"{mins}:{secs:02d}"
         
-        # Pill at top center
         pill_rect = pygame.Rect(WIDTH // 2 - 90, 20, 180, 50)
         pygame.draw.rect(screen, (80, 180, 100), pill_rect, border_radius=25)
         
-        # Timer text - no emoji
         timer_text = self.fonts['header'].render(time_str, True, WHITE)
         screen.blit(timer_text, (pill_rect.x + 25, pill_rect.y + 10))
         
-        # Cancel X button
         cancel_x = pill_rect.x + pill_rect.width - 30
         cancel_y = pill_rect.y + 25
         pygame.draw.circle(screen, (60, 150, 80), (cancel_x, cancel_y), 15)
@@ -362,18 +364,15 @@ class HomeView:
         
         pygame.draw.rect(screen, WHITE, (modal_x, modal_y, modal_width, modal_height), border_radius=16)
         
-        # Title
         title = self.fonts['header'].render("Kitchen Timer", True, SOFT_BLACK)
         screen.blit(title, (modal_x + 25, modal_y + 20))
         
-        # Close button
         close_x = modal_x + modal_width - 35
         close_y = modal_y + 35
         pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 16)
         pygame.draw.line(screen, CHARCOAL, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
         pygame.draw.line(screen, CHARCOAL, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
         
-        # Input display
         input_rect = pygame.Rect(modal_x + 25, modal_y + 65, modal_width - 50, 50)
         pygame.draw.rect(screen, LIGHT_GRAY, input_rect, border_radius=10)
         
@@ -381,7 +380,6 @@ class HomeView:
         input_text = self.fonts['header'].render(f"{display} min", True, SOFT_BLACK if self.timer_input else MID_GRAY)
         screen.blit(input_text, (input_rect.x + 20, input_rect.y + 10))
         
-        # Quick buttons
         quick_y = modal_y + 130
         quick_times = [1, 5, 10, 15, 30]
         btn_width = (modal_width - 70) // 5
@@ -394,7 +392,6 @@ class HomeView:
             screen.blit(btn_text, (btn_rect.x + (btn_width - 5 - btn_text.get_width()) // 2, btn_rect.y + 8))
             btn_x += btn_width
         
-        # Start button
         start_rect = pygame.Rect(modal_x + 25, modal_y + modal_height - 55, modal_width - 50, 42)
         btn_color = (80, 180, 100) if self.timer_input else MID_GRAY
         pygame.draw.rect(screen, btn_color, start_rect, border_radius=10)
@@ -431,10 +428,8 @@ class HomeView:
             self.wake()
             return 'woke_up'
         
-        # Reset activity timer on any touch
         self.reset_activity()
         
-        # Timer done dismiss
         if self.timer_done:
             dismiss_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 + 15, 200, 40)
             if dismiss_rect.collidepoint(x, y):
@@ -443,11 +438,9 @@ class HomeView:
                 return 'timer_dismissed'
             return None
         
-        # Timer modal
         if self.show_timer_modal:
             return self._handle_timer_modal_touch(x, y)
         
-        # Active timer cancel button
         if self.timer_active:
             pill_rect = pygame.Rect(WIDTH // 2 - 90, 20, 180, 50)
             cancel_x = pill_rect.x + pill_rect.width - 30
@@ -456,17 +449,17 @@ class HomeView:
                 self.timer_active = False
                 return 'timer_cancelled'
         
-        # Clock box tap - easter egg
-        clock_rect = pygame.Rect(WIDTH - 180, 20, 140, 65)
+        # Clock box - same position as header
+        clock_rect = pygame.Rect(WIDTH - 180, 25, 140, 65)
         if clock_rect.collidepoint(x, y):
             self.show_timer_modal = True
             self.timer_input = ""
             return 'show_timer'
         
-        # Quick action cards
+        # Quick action cards (updated positions)
         card_width = (WIDTH - 100) // 2
-        card_height = 180
-        card_y = 130
+        card_height = 160
+        card_y = 110
         
         if 40 <= x <= 40 + card_width and card_y <= y <= card_y + card_height:
             return 'navigate_search'
@@ -474,12 +467,11 @@ class HomeView:
         if 60 + card_width <= x <= 60 + card_width * 2 and card_y <= y <= card_y + card_height:
             return 'navigate_create'
         
-        # Today's meals box
-        box_rect = pygame.Rect(40, 330, WIDTH - 80, 130)
+        # Today's meals box (updated position)
+        box_rect = pygame.Rect(40, 290, WIDTH - 80, 170)
         if box_rect.collidepoint(x, y):
             today = datetime.now().strftime("%A")
             
-            # Check if we have meals
             has_meals = False
             if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
                 day_data = self.meal_plan_manager.get_day(today)
@@ -491,21 +483,21 @@ class HomeView:
                             break
             
             if has_meals:
-                # Check which meal slot was tapped
-                slot_width = (box_rect.width - 70) // 3
+                slot_width = (box_rect.width - 80) // 3
+                slot_height = 85
                 slot_x = box_rect.x + 25
-                slot_y = box_rect.y + 55
+                slot_y = box_rect.y + 60
                 
                 for meal_type in ['Breakfast', 'Lunch', 'Dinner']:
-                    slot_rect = pygame.Rect(slot_x, slot_y, slot_width - 10, 55)
+                    slot_rect = pygame.Rect(slot_x, slot_y, slot_width, slot_height)
                     if slot_rect.collidepoint(x, y):
                         meal = self.meal_plan_manager.get_meal(today, meal_type)
                         if meal:
                             return f'home_meal_{today}_{meal_type}'
-                    slot_x += slot_width
+                    slot_x += slot_width + 15
             else:
-                # "Plan Your Week" button
-                btn_rect = pygame.Rect(box_rect.x + 25, box_rect.y + 85, 180, 35)
+                center_y = box_rect.y + box_rect.height // 2
+                btn_rect = pygame.Rect(box_rect.x + 25, center_y + 10, 180, 40)
                 if btn_rect.collidepoint(x, y):
                     return 'navigate_meal_prep'
         
@@ -517,14 +509,12 @@ class HomeView:
         modal_x = (WIDTH - modal_width) // 2
         modal_y = (HEIGHT - modal_height) // 2
         
-        # Close button
         close_x = modal_x + modal_width - 35
         close_y = modal_y + 35
         if (x - close_x) ** 2 + (y - close_y) ** 2 <= 256:
             self.show_timer_modal = False
             return 'close_timer_modal'
         
-        # Quick buttons
         quick_y = modal_y + 130
         quick_times = [1, 5, 10, 15, 30]
         btn_width = (modal_width - 70) // 5
@@ -537,7 +527,6 @@ class HomeView:
                 return f'timer_quick_{mins}'
             btn_x += btn_width
         
-        # Start button
         start_rect = pygame.Rect(modal_x + 25, modal_y + modal_height - 55, modal_width - 50, 42)
         if start_rect.collidepoint(x, y) and self.timer_input:
             try:
@@ -551,7 +540,6 @@ class HomeView:
             except ValueError:
                 pass
         
-        # Outside modal
         if not (modal_x <= x <= modal_x + modal_width and modal_y <= y <= modal_y + modal_height):
             self.show_timer_modal = False
             return 'close_timer_modal'
