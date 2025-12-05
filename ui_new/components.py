@@ -67,17 +67,21 @@ class TouchKeyboard:
         self.font = font
         self.visible = False
         self.shift = False
-        self.y_offset = HEIGHT - KEYBOARD_HEIGHT
         self.pressed_key = None
         self.press_time = 0
         self.PRESS_DURATION = 100
+        
+        # Calculate actual keyboard height based on content
+        num_rows = len(KEYBOARD_ROWS) + 1  # +1 for special keys row
+        self.actual_height = (num_rows * (KEY_HEIGHT + KEY_MARGIN)) + 16  # 16 for top/bottom padding
+        self.y_offset = HEIGHT - self.actual_height
 
     def draw(self):
         if not self.visible:
             return
 
         # Warm cream background matching app palette
-        pygame.draw.rect(self.screen, (252, 245, 235), (0, self.y_offset, WIDTH, HEIGHT - self.y_offset))
+        pygame.draw.rect(self.screen, (252, 245, 235), (0, self.y_offset, WIDTH, self.actual_height))
         # Sage top border
         pygame.draw.line(self.screen, SAGE, (0, self.y_offset), (WIDTH, self.y_offset), 1)
 

@@ -16,7 +16,7 @@ from ui_new.constants import *
 class SettingsView:
     def __init__(self, fonts, config):
         self.fonts = fonts
-        self.config = config
+        self.config = config  # Use passed-in config instead of creating new one
         self.scroll_offset = 0
         self.max_scroll = 0
         
@@ -86,8 +86,7 @@ class SettingsView:
     def _draw_content(self, screen, content_bottom):
         content_height = self._calculate_content_height()
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        # Warm ivory background matching app gradient
-        content_surface.fill((255, 251, 245))
+        content_surface.fill(WHITE)
         
         y = 10
         
