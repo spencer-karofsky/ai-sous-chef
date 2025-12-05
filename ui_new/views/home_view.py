@@ -114,30 +114,6 @@ class HomeView:
         self.favorites_manager = favorites_manager
         self.saved_recipes_manager = saved_recipes_manager
     
-    def draw(self, screen, state):
-        # Flash red if timer done
-        if self.timer_done:
-            ticks = pygame.time.get_ticks()
-            if ticks - self.last_flash_ticks > 500:
-                self.flash_on = not self.flash_on
-                self.last_flash_ticks = ticks
-            if self.flash_on:
-                screen.fill((255, 60, 60))
-        
-        self._draw_header(screen)
-        self._draw_clock_box(screen)
-        self._draw_quick_actions(screen)
-        self._draw_todays_meals(screen)
-        
-        if self.timer_active:
-            self._draw_timer_pill(screen)
-        
-        if self.timer_done:
-            self._draw_timer_done(screen)
-        
-        if self.show_timer_modal:
-            self._draw_timer_modal(screen)
-    
     def _draw_header(self, screen):
         title = self.fonts['title'].render("AI Sous Chef", True, SOFT_BLACK)
         screen.blit(title, (40, 25))
