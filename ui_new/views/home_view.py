@@ -186,19 +186,20 @@ class HomeView:
         card_width = (WIDTH - 100) // 2
         card_height = 160
         
-        # Search card
+        # Search card - medium dark for visibility
         search_rect = pygame.Rect(40, y, card_width, card_height)
-        pygame.draw.rect(screen, LIGHT_GRAY, search_rect, border_radius=16)
+        search_bg = (70, 70, 75)  # Medium charcoal
+        pygame.draw.rect(screen, search_bg, search_rect, border_radius=16)
         
-        search_title = self.fonts['header'].render("Search", True, SOFT_BLACK)
+        search_title = self.fonts['header'].render("Search", True, WHITE)
         screen.blit(search_title, (search_rect.x + 25, search_rect.y + 22))
         
-        search_desc = self.fonts['small'].render("Find recipes from", True, DARK_GRAY)
+        search_desc = self.fonts['small'].render("Find recipes from", True, MID_GRAY)
         screen.blit(search_desc, (search_rect.x + 25, search_rect.y + 62))
-        search_desc2 = self.fonts['small'].render("our collection", True, DARK_GRAY)
+        search_desc2 = self.fonts['small'].render("our collection", True, MID_GRAY)
         screen.blit(search_desc2, (search_rect.x + 25, search_rect.y + 86))
         
-        self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65)
+        self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65, WHITE)
         
         # Create card
         create_rect = pygame.Rect(60 + card_width, y, card_width, card_height)
@@ -398,9 +399,9 @@ class HomeView:
         start_text = self.fonts['body'].render("Start Timer", True, WHITE)
         screen.blit(start_text, (start_rect.x + (modal_width - 50 - start_text.get_width()) // 2, start_rect.y + 10))
     
-    def _draw_search_icon(self, screen, x, y):
-        pygame.draw.circle(screen, CHARCOAL, (x + 20, y + 20), 18, 3)
-        pygame.draw.line(screen, CHARCOAL, (x + 33, y + 33), (x + 48, y + 48), 4)
+    def _draw_search_icon(self, screen, x, y, color=CHARCOAL):
+        pygame.draw.circle(screen, color, (x + 20, y + 20), 18, 3)
+        pygame.draw.line(screen, color, (x + 33, y + 33), (x + 48, y + 48), 4)
     
     def _draw_sparkles_icon(self, screen, x, y, color):
         size = 50
