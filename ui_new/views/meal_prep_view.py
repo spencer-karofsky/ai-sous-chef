@@ -17,8 +17,8 @@ WARM_BG = (255, 251, 245)
 CARD_BORDER = (226, 226, 226)  # #e2e2e2
 CARD_TEXT = (51, 51, 51)  # #333
 
-# Active card - teal at 10-15% opacity over white ≈ this color
-ACTIVE_CARD_BG = (217, 234, 240)  # Teal 12% opacity approximation
+# Active card - teal at 60-70% opacity over white
+ACTIVE_CARD_BG = (165, 205, 218)  # Teal ~65% opacity approximation
 ACTIVE_CARD_TEXT = SOFT_BLACK
 
 # Meal type micro-label colors
