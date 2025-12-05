@@ -1,7 +1,9 @@
 """
 ui_new/constants.py
+
 Description:
     * Shared constants for AI Sous Chef UI (Clean minimal design)
+
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
@@ -21,6 +23,20 @@ ACCENT = (45, 45, 45)
 ACCENT_LIGHT = (100, 100, 100)
 DIVIDER = (230, 230, 230)
 
+# App color palette
+SAGE = (142, 157, 139)
+SAGE_LIGHT = (227, 231, 226)
+TEAL = (26, 94, 120)
+
+# Navigation bar
+NAV_BG = (227, 231, 226)  # Light sage
+
+# Keyboard colors
+KB_BG = (45, 45, 48)
+KB_KEY = (70, 70, 75)
+KB_KEY_PRESSED = (100, 100, 105)
+KB_KEY_SPECIAL = (55, 55, 60)
+
 # Screen dimensions for 7" RPi display (rotated)
 WIDTH = 1280
 HEIGHT = 720
@@ -30,16 +46,36 @@ NAV_HEIGHT = 85
 NAV_ICON_SIZE = 28
 NAV_ITEMS = ['Home', 'Search', 'My Kitchen', 'Create', 'Settings']
 
-# Keyboard layout
+# Keyboard layouts
+KEYBOARD_LETTERS = [
+    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+    ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
+]
+
+KEYBOARD_NUMBERS = [
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+    ['-', '/', ':', ';', '(', ')', '$', '&', '@', '"'],
+    ['.', ',', '?', '!', "'", '#', '%', '^', '*'],
+]
+
+KEYBOARD_SYMBOLS = [
+    ['[', ']', '{', '}', '#', '%', '^', '*', '+', '='],
+    ['_', '\\', '|', '~', '<', '>', '@', '&', '"'],
+    ['.', ',', '?', '!', "'", '-', '/', ':', ';'],
+]
+
+# Legacy layout (for backwards compatibility)
 KEYBOARD_ROWS = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "!"],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"],
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'],
 ]
-KEYBOARD_HEIGHT = 295
+
+KEYBOARD_HEIGHT = 220
 KEY_WIDTH = 100
-KEY_HEIGHT = 50
+KEY_HEIGHT = 42
 KEY_MARGIN = 5
 
 # Typography sizes
@@ -49,13 +85,13 @@ FONT_BODY = 26
 FONT_SMALL = 22
 FONT_CAPTION = 18
 
-# Font names - will try in order until one works
+# Font names
 FONT_SANS = [
-    "SF Pro Display",# macOS
-    "Segoe UI", # Windows
-    "Roboto", # Linux/Android
-    "DejaVu Sans", # Linux fallback
-    "FreeSans", # Linux fallback
-    "Arial", # Universal fallback
-    None # Pygame default
+    "SF Pro Display",
+    "Segoe UI",
+    "Roboto",
+    "DejaVu Sans",
+    "FreeSans",
+    "Arial",
+    None
 ]
