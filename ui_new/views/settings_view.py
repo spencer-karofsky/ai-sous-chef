@@ -92,7 +92,6 @@ class SettingsView:
     def _draw_content(self, screen, content_bottom):
         content_height = self._calculate_content_height()
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WARM_BG)
         
         y = 10
         
