@@ -186,17 +186,17 @@ class HomeView:
         card_width = (WIDTH - 100) // 2
         card_height = 160
         
-        # Search card - medium dark for visibility
+        # Search card - warm sage green, inviting but not loud
         search_rect = pygame.Rect(40, y, card_width, card_height)
-        search_bg = (70, 70, 75)  # Medium charcoal
+        search_bg = (142, 157, 139)  # Muted sage
         pygame.draw.rect(screen, search_bg, search_rect, border_radius=16)
         
         search_title = self.fonts['header'].render("Search", True, WHITE)
         screen.blit(search_title, (search_rect.x + 25, search_rect.y + 22))
         
-        search_desc = self.fonts['small'].render("Find recipes from", True, MID_GRAY)
+        search_desc = self.fonts['small'].render("Find recipes from", True, (230, 235, 228))
         screen.blit(search_desc, (search_rect.x + 25, search_rect.y + 62))
-        search_desc2 = self.fonts['small'].render("our collection", True, MID_GRAY)
+        search_desc2 = self.fonts['small'].render("our collection", True, (230, 235, 228))
         screen.blit(search_desc2, (search_rect.x + 25, search_rect.y + 86))
         
         self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65, WHITE)
