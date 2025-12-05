@@ -60,7 +60,7 @@ class NavBar:
 
 
 class TouchKeyboard:
-    """On-screen touch keyboard."""
+    """On-screen touch keyboard - half screen height."""
     
     def __init__(self, screen, font):
         self.screen = screen
@@ -71,10 +71,22 @@ class TouchKeyboard:
         self.press_time = 0
         self.PRESS_DURATION = 100
         
-        # Calculate actual keyboard height based on content
-        num_rows = len(KEYBOARD_ROWS) + 1  # +1 for special keys row
-        self.actual_height = (num_rows * (KEY_HEIGHT + KEY_MARGIN)) + 16  # 16 for top/bottom padding
+        # Target half screen height
+        self.actual_height = HEIGHT // 2
         self.y_offset = HEIGHT - self.actual_height
+        
+        # Calculate key dimensions to fill the space
+        num_rows = len(KEYBOARD_ROWS) + 1  # +1 for special keys row
+        self.vertical_padding = 12
+        self.row_spacing = 8
+        
+        # Calculate key height to fill available space
+        available_height = self.actual_height - (self.vertical_padding * 2) - (self.row_spacing * (num_rows - 1))
+        self.key_height = available_height // num_rows
+        
+        # Key width scales with height for nice proportions
+        self.key_width = 62
+        self.key_margin = 6
 
     def draw(self):
         if not self.visible:
@@ -85,11 +97,11 @@ class TouchKeyboard:
         # Sage top border
         pygame.draw.line(self.screen, SAGE, (0, self.y_offset), (WIDTH, self.y_offset), 1)
 
-        y = self.y_offset + 8
+        y = self.y_offset + self.vertical_padding
         current_time = pygame.time.get_ticks()
 
         for row in KEYBOARD_ROWS:
-            row_width = len(row) * (KEY_WIDTH + KEY_MARGIN) - KEY_MARGIN
+            row_width = len(row) * (self.key_width + self.key_margin) - self.key_margin
             x = (WIDTH - row_width) // 2
 
             for key in row:
@@ -97,36 +109,45 @@ class TouchKeyboard:
                 is_pressed = (self.pressed_key == key and
                               current_time - self.press_time < self.PRESS_DURATION)
 
-                key_rect = pygame.Rect(x, y, KEY_WIDTH, KEY_HEIGHT)
+                key_rect = pygame.Rect(x, y, self.key_width, self.key_height)
                 
                 if is_pressed:
                     # Pressed state: teal background
-                    pygame.draw.rect(self.screen, TEAL, key_rect, border_radius=8)
+                    pygame.draw.rect(self.screen, TEAL, key_rect, border_radius=10)
                     label = self.font.render(display_key, True, WHITE)
                 else:
                     # Normal state: white with sage border
-                    pygame.draw.rect(self.screen, WHITE, key_rect, border_radius=8)
-                    pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=8, width=1)
+                    pygame.draw.rect(self.screen, WHITE, key_rect, border_radius=10)
+                    pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=10, width=1)
                     label = self.font.render(display_key, True, SOFT_BLACK)
 
-                label_x = x + (KEY_WIDTH - label.get_width()) // 2
-                label_y = y + (KEY_HEIGHT - label.get_height()) // 2
+                label_x = x + (self.key_width - label.get_width()) // 2
+                label_y = y + (self.key_height - label.get_height()) // 2
                 self.screen.blit(label, (label_x, label_y))
 
-                x += KEY_WIDTH + KEY_MARGIN
-            y += KEY_HEIGHT + KEY_MARGIN
+                x += self.key_width + self.key_margin
+            y += self.key_height + self.row_spacing
 
         self._draw_special_keys(y, current_time)
 
     def _draw_special_keys(self, y, current_time):
-        special_keys = [('Shift', 100), ('SPACE', 450), ('DELETE', 100), ('Go', 100), ('HIDE', 70)]
-        x = (WIDTH - sum(w for _, w in special_keys) - KEY_MARGIN * 4) // 2
+        # Scale special key widths proportionally
+        total_width = WIDTH - 40  # 20px padding on each side
+        special_keys = [
+            ('Shift', int(total_width * 0.12)),
+            ('SPACE', int(total_width * 0.50)),
+            ('DELETE', int(total_width * 0.12)),
+            ('Go', int(total_width * 0.14)),
+            ('HIDE', int(total_width * 0.08)),
+        ]
+        
+        x = (WIDTH - sum(w for _, w in special_keys) - self.key_margin * 4) // 2
 
         for label, width in special_keys:
             is_pressed = (self.pressed_key == label and
                         current_time - self.press_time < self.PRESS_DURATION)
 
-            key_rect = pygame.Rect(x, y, width, KEY_HEIGHT)
+            key_rect = pygame.Rect(x, y, width, self.key_height)
             
             if label == 'Go':
                 # Go button: teal (primary action)
@@ -145,11 +166,11 @@ class TouchKeyboard:
                 bg_color = SAGE_LIGHT
                 text_color = SOFT_BLACK
             
-            pygame.draw.rect(self.screen, bg_color, key_rect, border_radius=8)
+            pygame.draw.rect(self.screen, bg_color, key_rect, border_radius=10)
             
             # Add border for non-filled buttons
             if bg_color == SAGE_LIGHT:
-                pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=8, width=1)
+                pygame.draw.rect(self.screen, SAGE, key_rect, border_radius=10, width=1)
             
             if label == 'DELETE':
                 self._draw_backspace_icon(x, y, width, text_color)
@@ -158,18 +179,20 @@ class TouchKeyboard:
             else:
                 text = self.font.render(label, True, text_color)
                 text_x = x + (width - text.get_width()) // 2
-                text_y = y + (KEY_HEIGHT - text.get_height()) // 2
+                text_y = y + (self.key_height - text.get_height()) // 2
                 self.screen.blit(text, (text_x, text_y))
 
-            x += width + KEY_MARGIN
+            x += width + self.key_margin
 
     def _draw_backspace_icon(self, x, y, width, color):
         """Draw a backspace arrow icon."""
         cx = x + width // 2
-        cy = y + KEY_HEIGHT // 2
+        cy = y + self.key_height // 2
         
-        arrow_width = 24
-        arrow_height = 16
+        # Scale icon with key height
+        scale = self.key_height / 50
+        arrow_width = int(28 * scale)
+        arrow_height = int(18 * scale)
         
         points = [
             (cx - arrow_width // 2, cy),
@@ -180,8 +203,8 @@ class TouchKeyboard:
         ]
         pygame.draw.polygon(self.screen, color, points, 2)
         
-        x_size = 4
-        x_cx = cx + 4
+        x_size = int(5 * scale)
+        x_cx = cx + int(5 * scale)
         pygame.draw.line(self.screen, color, (x_cx - x_size, cy - x_size), 
                         (x_cx + x_size, cy + x_size), 2)
         pygame.draw.line(self.screen, color, (x_cx + x_size, cy - x_size), 
@@ -190,10 +213,12 @@ class TouchKeyboard:
     def _draw_hide_icon(self, x, y, width, color):
         """Draw a keyboard hide icon (chevron down)."""
         cx = x + width // 2
-        cy = y + KEY_HEIGHT // 2
+        cy = y + self.key_height // 2
         
-        chevron_width = 16
-        chevron_height = 8
+        # Scale icon with key height
+        scale = self.key_height / 50
+        chevron_width = int(18 * scale)
+        chevron_height = int(10 * scale)
         
         pygame.draw.line(self.screen, color, 
                         (cx - chevron_width // 2, cy - chevron_height // 2),
@@ -210,30 +235,38 @@ class TouchKeyboard:
         if y < self.y_offset:
             return None
 
-        key_y = self.y_offset + 12
+        key_y = self.y_offset + self.vertical_padding
         for row in KEYBOARD_ROWS:
-            row_width = len(row) * (KEY_WIDTH + KEY_MARGIN) - KEY_MARGIN
+            row_width = len(row) * (self.key_width + self.key_margin) - self.key_margin
             key_x = (WIDTH - row_width) // 2
 
             for key in row:
-                key_rect = pygame.Rect(key_x, key_y, KEY_WIDTH, KEY_HEIGHT)
+                key_rect = pygame.Rect(key_x, key_y, self.key_width, self.key_height)
                 if key_rect.collidepoint(pos):
                     result = key.upper() if self.shift else key
                     self.pressed_key = key
                     self.press_time = pygame.time.get_ticks()
                     self.shift = False
                     return result
-                key_x += KEY_WIDTH + KEY_MARGIN
-            key_y += KEY_HEIGHT + KEY_MARGIN
+                key_x += self.key_width + self.key_margin
+            key_y += self.key_height + self.row_spacing
 
         return self._handle_special_keys(pos, key_y)
 
     def _handle_special_keys(self, pos, y):
-        special_keys = [('SHIFT', 100), ('SPACE', 450), ('BACKSPACE', 100), ('GO', 100), ('HIDE', 70)]
-        key_x = (WIDTH - sum(w for _, w in special_keys) - KEY_MARGIN * 4) // 2
+        total_width = WIDTH - 40
+        special_keys = [
+            ('SHIFT', int(total_width * 0.12)),
+            ('SPACE', int(total_width * 0.50)),
+            ('BACKSPACE', int(total_width * 0.12)),
+            ('GO', int(total_width * 0.14)),
+            ('HIDE', int(total_width * 0.08)),
+        ]
+        
+        key_x = (WIDTH - sum(w for _, w in special_keys) - self.key_margin * 4) // 2
 
         for action, width in special_keys:
-            key_rect = pygame.Rect(key_x, y, width, KEY_HEIGHT)
+            key_rect = pygame.Rect(key_x, y, width, self.key_height)
             if key_rect.collidepoint(pos):
                 self.pressed_key = action
                 self.press_time = pygame.time.get_ticks()
@@ -243,5 +276,5 @@ class TouchKeyboard:
                 elif action == 'SPACE':
                     return ' '
                 return action
-            key_x += width + KEY_MARGIN
+            key_x += width + self.key_margin
         return None
