@@ -68,54 +68,48 @@ class GroceryListManager:
                 pass
         return None
     
-    def generate_from_meals(self, meals: List[Dict], week_label: str = "") -> Optional[str]:
+    def generate_from_meals(self, meals: List[Dict], plan_name: str = "") -> Optional[str]:
         """
-        Generate a grocery list from meal plan using AI to aggregate ingredients.
-        
-        Args:
-            meals: List of meal dicts with 'ingredients' lists
-            week_label: Optional label for the list
-            
-        Returns:
-            List ID if successful, None otherwise
+        Generate a grocery list from meal plan using AI.
+        Works with just recipe names - doesn't need full ingredients.
         """
         if not meals:
+            print("[GroceryList] No meals provided")
             return None
         
-        # Collect all ingredients
-        all_ingredients = []
-        recipe_names = []
-        for meal in meals:
-            ingredients = meal.get('ingredients', [])
-            all_ingredients.extend(ingredients)
-            recipe_names.append(meal.get('name', 'Unknown'))
+        recipe_names = [meal.get('name') for meal in meals if meal.get('name')]
         
-        if not all_ingredients:
+        if not recipe_names:
+            print("[GroceryList] No recipe names found")
             return None
         
-        # Use AI to aggregate and categorize
+        print(f"[GroceryList] Generating list for {len(recipe_names)} recipes")
+        
+        # Use AI to generate grocery list from recipe names
         if self.bedrock:
-            categorized = self._ai_aggregate_ingredients(all_ingredients)
+            categorized = self._ai_generate_from_names(recipe_names)
         else:
-            # Fallback: simple grouping without AI
-            categorized = self._simple_aggregate(all_ingredients)
+            print("[GroceryList] No bedrock manager")
+            return None
+        
+        if not categorized:
+            print("[GroceryList] AI generation failed")
+            return None
         
         # Create the grocery list
         list_id = str(uuid.uuid4())[:8]
         
         grocery_list = {
             'id': list_id,
-            'name': week_label or f"Grocery List - {datetime.now().strftime('%b %d')}",
+            'name': plan_name or f"Grocery List - {datetime.now().strftime('%b %d')}",
             'created_at': datetime.now().isoformat(),
             'recipes': recipe_names,
             'categories': categorized,
-            'checked_items': []  # Track checked off items
+            'checked_items': []
         }
         
-        # Save to file
         self._save_list(list_id, grocery_list)
         
-        # Add to index
         self.lists.insert(0, {
             'id': list_id,
             'name': grocery_list['name'],
@@ -125,7 +119,49 @@ class GroceryListManager:
         })
         self._save_index()
         
+        print(f"[GroceryList] Created list {list_id}")
         return list_id
+
+    def _ai_generate_from_names(self, recipe_names: List[str]) -> Optional[Dict[str, List[Dict]]]:
+        """Generate grocery list from recipe names using AI."""
+        
+        system_prompt = """You are a grocery list generator. Given recipe names, estimate ingredients needed.
+
+    Return ONLY valid JSON:
+    {
+        "Produce": [{"item": "onions", "quantity": "3 medium"}],
+        "Meat & Seafood": [{"item": "chicken breast", "quantity": "3 lbs"}],
+        "Dairy & Eggs": [{"item": "eggs", "quantity": "1 dozen"}],
+        "Bakery": [],
+        "Pantry": [{"item": "olive oil", "1 bottle"}],
+        "Frozen": [],
+        "Beverages": [],
+        "Other": []
+    }
+
+    Combine similar ingredients across recipes. Be practical with quantities."""
+
+        prompt = "Generate a grocery list for:\n" + "\n".join(f"- {name}" for name in recipe_names)
+        
+        try:
+            response = self.bedrock.invoke_model_with_system(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                model_id=self.bedrock.models_dict['claude-haiku-3'],
+                max_tokens=2000,
+                temperature=0.3
+            )
+            
+            if response:
+                result = json.loads(response.strip())
+                for cat in self.CATEGORIES:
+                    if cat not in result:
+                        result[cat] = []
+                return result
+        except (json.JSONDecodeError, Exception) as e:
+            print(f"[GroceryList] AI generation failed: {e}")
+        
+        return None
     
     def _ai_aggregate_ingredients(self, ingredients: List[str]) -> Dict[str, List[Dict]]:
         """Use AI to combine similar ingredients and categorize them."""

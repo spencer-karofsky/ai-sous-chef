@@ -291,7 +291,8 @@ class GroceryListView:
             return 'back'
         
         # Generate button
-        gen_rect = pygame.Rect(30, 100, WIDTH - 60, 55)
+        gen_y = 100  # Matches: y_start (90) + 10
+        gen_rect = pygame.Rect(30, gen_y, WIDTH - 60, 55)
         if gen_rect.collidepoint(x, y):
             if self.meal_plan_manager and self.meal_plan_manager.get_meal_count() > 0:
                 return 'generate_list'
@@ -300,7 +301,7 @@ class GroceryListView:
         if self.grocery_manager:
             lists = self.grocery_manager.get_all_lists()
             item_height = 80
-            list_start_y = 180
+            list_start_y = gen_y + 70  # Changed from 180 to match draw code
             
             for i, grocery_list in enumerate(lists):
                 card_y = list_start_y + i * item_height
@@ -359,12 +360,9 @@ class GroceryListView:
         
         self.generating = True
         meals = self.meal_plan_manager.get_all_meals()
-        week_start = self.meal_plan_manager.get_week_start()
+        plan_name = self.meal_plan_manager.get_plan_name()
         
-        list_id = self.grocery_manager.generate_from_meals(
-            meals, 
-            f"Week of {week_start}"
-        )
+        list_id = self.grocery_manager.generate_from_meals(meals, plan_name)
         
         self.generating = False
         
