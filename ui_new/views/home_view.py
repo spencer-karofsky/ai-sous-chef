@@ -46,9 +46,9 @@ class HomeView:
         
         self.gradient_surface = pygame.Surface((width, height))
         
-        # Subtle warm gradient: off-white to very light warm gray
-        top_color = (252, 251, 250)      # Warm off-white
-        bottom_color = (245, 243, 240)   # Slightly warmer/darker
+        # Soft warm white gradient
+        top_color = (255, 253, 250)      # Soft warm white
+        bottom_color = (250, 247, 242)   # Slightly warmer cream
         
         for y in range(height):
             t = y / height
@@ -201,9 +201,9 @@ class HomeView:
         
         self._draw_search_icon(screen, search_rect.x + card_width - 75, search_rect.y + card_height - 65, WHITE)
         
-        # Create card - deep navy blue
+        # Create card - teal blue
         create_rect = pygame.Rect(60 + card_width, y, card_width, card_height)
-        create_bg = (30, 42, 120)  # #1e2a78
+        create_bg = (26, 94, 120)  # #1a5e78
         pygame.draw.rect(screen, create_bg, create_rect, border_radius=16)
         
         create_title = self.fonts['header'].render("Create", True, WHITE)
