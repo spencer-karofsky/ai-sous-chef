@@ -371,19 +371,23 @@ class HomeView:
         title = self.fonts['header'].render("Kitchen Timer", True, SOFT_BLACK)
         screen.blit(title, (modal_x + 25, modal_y + 20))
         
+        # Close button - sage light fill with soft black X
         close_x = modal_x + modal_width - 35
         close_y = modal_y + 35
-        pygame.draw.circle(screen, LIGHT_GRAY, (close_x, close_y), 16)
-        pygame.draw.line(screen, CHARCOAL, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
-        pygame.draw.line(screen, CHARCOAL, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
+        pygame.draw.circle(screen, SAGE_LIGHT, (close_x, close_y), 16)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x - 5, close_y - 5), (close_x + 5, close_y + 5), 2)
+        pygame.draw.line(screen, SOFT_BLACK, (close_x + 5, close_y - 5), (close_x - 5, close_y + 5), 2)
         
+        # Input field - white fill with sage border
         input_rect = pygame.Rect(modal_x + 25, modal_y + 65, modal_width - 50, 50)
-        pygame.draw.rect(screen, LIGHT_GRAY, input_rect, border_radius=10)
+        pygame.draw.rect(screen, WHITE, input_rect, border_radius=10)
+        pygame.draw.rect(screen, SAGE, input_rect, border_radius=10, width=1)
         
         display = self.timer_input if self.timer_input else "0"
         input_text = self.fonts['header'].render(f"{display} min", True, SOFT_BLACK if self.timer_input else MID_GRAY)
         screen.blit(input_text, (input_rect.x + 20, input_rect.y + 10))
         
+        # Quick time buttons - sage light fill with sage border
         quick_y = modal_y + 130
         quick_times = [1, 5, 10, 15, 30]
         btn_width = (modal_width - 70) // 5
@@ -391,15 +395,20 @@ class HomeView:
         
         for mins in quick_times:
             btn_rect = pygame.Rect(btn_x, quick_y, btn_width - 5, 38)
-            pygame.draw.rect(screen, LIGHT_GRAY, btn_rect, border_radius=8)
+            pygame.draw.rect(screen, SAGE_LIGHT, btn_rect, border_radius=8)
+            pygame.draw.rect(screen, SAGE, btn_rect, border_radius=8, width=1)
             btn_text = self.fonts['body'].render(str(mins), True, SOFT_BLACK)
             screen.blit(btn_text, (btn_rect.x + (btn_width - 5 - btn_text.get_width()) // 2, btn_rect.y + 8))
             btn_x += btn_width
         
+        # Start button - teal when active, sage light when disabled
         start_rect = pygame.Rect(modal_x + 25, modal_y + modal_height - 55, modal_width - 50, 42)
-        btn_color = (80, 180, 100) if self.timer_input else MID_GRAY
-        pygame.draw.rect(screen, btn_color, start_rect, border_radius=10)
-        start_text = self.fonts['body'].render("Start Timer", True, WHITE)
+        if self.timer_input:
+            pygame.draw.rect(screen, TEAL, start_rect, border_radius=10)
+            start_text = self.fonts['body'].render("Start Timer", True, WHITE)
+        else:
+            pygame.draw.rect(screen, SAGE_LIGHT, start_rect, border_radius=10)
+            start_text = self.fonts['body'].render("Start Timer", True, DARK_GRAY)
         screen.blit(start_text, (start_rect.x + (modal_width - 50 - start_text.get_width()) // 2, start_rect.y + 10))
     
     def _draw_search_icon(self, screen, x, y, color=CHARCOAL):
