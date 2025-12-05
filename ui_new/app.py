@@ -707,8 +707,10 @@ class RecipeApp:
                         self.touch_start_y = event.pos[1]
                         self.touch_start_x = event.pos[0]
                         self.is_dragging = False
-                        
-                        if self.current_view == 'Settings':
+
+                        if self.current_view == 'GroceryList':  # Add this
+                            self.touch_start_scroll = self.views['GroceryList'].scroll_offset
+                        elif self.current_view == 'Settings':
                             self.touch_start_scroll = self.views['Settings'].scroll_offset
                             self._check_slider_start(event.pos)
                         elif self.current_view == 'Recipe':
