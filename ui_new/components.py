@@ -77,11 +77,11 @@ class TouchKeyboard:
             return
 
         # Warm cream background matching app palette
-        pygame.draw.rect(self.screen, (252, 245, 235), (0, self.y_offset, WIDTH, KEYBOARD_HEIGHT + 10))
+        pygame.draw.rect(self.screen, (252, 245, 235), (0, self.y_offset, WIDTH, HEIGHT - self.y_offset))
         # Sage top border
         pygame.draw.line(self.screen, SAGE, (0, self.y_offset), (WIDTH, self.y_offset), 1)
 
-        y = self.y_offset + 12
+        y = self.y_offset + 8
         current_time = pygame.time.get_ticks()
 
         for row in KEYBOARD_ROWS:

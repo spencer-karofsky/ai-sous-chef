@@ -86,7 +86,8 @@ class SettingsView:
     def _draw_content(self, screen, content_bottom):
         content_height = self._calculate_content_height()
         content_surface = pygame.Surface((WIDTH, content_height), pygame.SRCALPHA)
-        content_surface.fill(WHITE)
+        # Warm ivory background matching app gradient
+        content_surface.fill((255, 251, 245))
         
         y = 10
         
