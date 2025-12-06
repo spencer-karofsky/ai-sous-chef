@@ -8,7 +8,7 @@
 |:--:|:--:|:--:|
 | ![Meal Prep View](IMG_126D5AE2-4A01-4A71-A355-C52E7A836123.JPEG) | ![My Kitchen View](IMG_84950038-21F6-4DE4-85D7-30472A483673.JPEG) | ![Settings View](IMG_6C8A9CE2-E74B-4E47-94E5-BF7DAA933906.JPEG) |
 
-<video controls src="IMG_1079.MOV" title="AI Sous Chef Vide Demo"></video>
+[Watch Demo](IMG_1079.MOV)
 
 
 **A hands-free, low-cost kitchen assistant powered by AWS and on-device interaction.**
@@ -38,7 +38,7 @@ All AWS resources are provisioned and torn down programmatically using boto3.
 ## Tech Stack
 ### ETL Pipeline
 * EC2: Executes the ETL pipeline that processes the raw recipes dataset.
-* *S3: Stores the raw dataset, cleaned recipe JSON files, and metadata.
+* S3: Stores the raw dataset, cleaned recipe JSON files, and metadata.
 * DynamoDB: Holds recipe metadata for efficient, low-cost key-value lookups.
 * VPC: Provides isolated networking for ETL execution.
 * IAM: Manages fine-grained access control for EC2, S3, DynamoDB, and Bedrock.
