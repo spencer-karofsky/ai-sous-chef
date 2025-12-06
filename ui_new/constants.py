@@ -73,7 +73,7 @@ KEYBOARD_ROWS = [
     ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'],
 ]
 
-KEYBOARD_HEIGHT = 220
+KEYBOARD_HEIGHT = 360
 KEY_WIDTH = 100
 KEY_HEIGHT = 42
 KEY_MARGIN = 5
