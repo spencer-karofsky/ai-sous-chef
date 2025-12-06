@@ -1,24 +1,19 @@
 # AI Sous Chef
 
-![Home View](IMG_3100051D-A904-4133-860B-C6BBA83B0736.JPEG)
-![Create View](IMG_4157DB9B-FAEC-431A-B02F-A1DB89EC1847.JPEG)
-![Search Recipes View](IMG_1081.HEIC)
-![Meal Prep View](IMG_126D5AE2-4A01-4A71-A355-C52E7A836123.JPEG)
-![My Kitchen View](IMG_84950038-21F6-4DE4-85D7-30472A483673.JPEG)
-![Settings View](IMG_6C8A9CE2-E74B-4E47-94E5-BF7DAA933906.JPEG)
+<table>
+  <tr>
+    <td style="text-align:center">Home View<br><img src="assets/home.jpeg" width="200"></td>
+    <td style="text-align:center">Create View<br><img src="assets/create.jpeg" width="200"></td>
+    <td style="text-align:center">Search Recipes View<br><img src="assets/search.jpeg" width="200"></td>
+  </tr>
+  <tr>
+    <td style="text-align:center">Meal Prep View<br><img src="assets/meal_prep.jpeg" width="200"></td>
+    <td style="text-align:center">My Kitchen View<br><img src="assets/kitchen.jpeg" width="200"></td>
+    <td style="text-align:center">Settings View<br><img src="assets/settings.jpeg" width="200"></td>
+  </tr>
+</table>
 
-<video controls src="IMG_1079.MOV" title="AI Sous Chef Vide Demo"></video>
-
-
-| Home View | Create View | Search Recipes View |
-|:--:|:--:|:--:|
-| ![Home View](IMG_3100051D-A904-4133-860B-C6BBA83B0736.JPEG) | ![Create View](IMG_4157DB9B-FAEC-431A-B02F-A1DB89EC1847.JPEG) | ![Search Recipes View](IMG_1081.HEIC) |
-
-| Meal Prep View | My Kitchen View | Settings View |
-|:--:|:--:|:--:|
-| ![Meal Prep View](IMG_126D5AE2-4A01-4A71-A355-C52E7A836123.JPEG) | ![My Kitchen View](IMG_84950038-21F6-4DE4-85D7-30472A483673.JPEG) | ![Settings View](IMG_6C8A9CE2-E74B-4E47-94E5-BF7DAA933906.JPEG) |
-
-<video controls src="IMG_1079.MOV" title="AI Sous Chef Vide Demo"></video>
+<video controls src="IMG_1079.MOV" title="AI Sous Chef Video Demo"></video>
 
 
 **A hands-free, low-cost kitchen assistant powered by AWS and on-device interaction.**
