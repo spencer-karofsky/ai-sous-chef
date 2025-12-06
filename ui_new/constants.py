@@ -7,7 +7,7 @@ Description:
 Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
-# Colors - Clean minimal palette
+# Colors
 WHITE = (255, 255, 255)
 OFF_WHITE = (250, 250, 250)
 CREAM = (248, 247, 245)
@@ -29,7 +29,7 @@ SAGE_LIGHT = (227, 231, 226)
 TEAL = (26, 94, 120)
 
 # Navigation bar
-NAV_BG = (227, 231, 226)  # Light sage
+NAV_BG = (227, 231, 226) # Light sage
 
 # Keyboard colors
 KB_BG = (45, 45, 48)

@@ -8,7 +8,7 @@
 |:--:|:--:|:--:|
 | ![Meal Prep View](assets/IMG_126D5AE2-4A01-4A71-A355-C52E7A836123.JPEG) | ![My Kitchen View](assets/IMG_84950038-21F6-4DE4-85D7-30472A483673.JPEG) | ![Settings View](assets/IMG_6C8A9CE2-E74B-4E47-94E5-BF7DAA933906.JPEG) |
 
-[Watch Demo on YouTube](https://youtube.com/shorts/lS2LWb7GAdI?feature=share)
+[Watch Demo on YouTube](https://www.youtube.com/shorts/E70e16KVUIU?si=z7HLkk96REtwvygW)
 
 
 **A hands-free, low-cost kitchen assistant powered by AWS and on-device interaction.**

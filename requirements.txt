@@ -5,3 +5,6 @@ botocore
 requests
 python-dateutil
 pygame
+vosk
+sounddevice
+numpy
