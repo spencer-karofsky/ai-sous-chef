@@ -422,7 +422,6 @@ class GroceryListView:
         
         if is_checked:
             pygame.draw.rect(surface, CHECK_GREEN, check_rect, border_radius=6)
-            # Checkmark
             pygame.draw.line(surface, WHITE, (check_x + 5, check_y + 11), (check_x + 9, check_y + 16), 2)
             pygame.draw.line(surface, WHITE, (check_x + 9, check_y + 16), (check_x + 17, check_y + 6), 2)
         else:
@@ -431,18 +430,26 @@ class GroceryListView:
         # Item text
         item_name = item.get('item', str(item))
         quantity = item.get('quantity', '')
+        reason = item.get('reason', '')
         
         if quantity:
             display_text = f"{quantity} {item_name}"
         else:
             display_text = item_name
         
-        if len(display_text) > 45:
-            display_text = display_text[:42] + '...'
+        # Truncate main text shorter if we have a reason to show
+        max_len = 30 if reason else 45
+        if len(display_text) > max_len:
+            display_text = display_text[:max_len - 3] + '...'
         
         text_color = DARK_GRAY if is_checked else SOFT_BLACK
         item_text = self.fonts['body'].render(display_text, True, text_color)
         surface.blit(item_text, (check_x + 35, item_rect.y + 13))
+        
+        # Show reason for optional items
+        if reason and category == 'Optional':
+            reason_text = self.fonts['small'].render(f"({reason})", True, DARK_GRAY)
+            surface.blit(reason_text, (check_x + 45 + item_text.get_width(), item_rect.y + 15))
     
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos

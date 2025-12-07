@@ -125,8 +125,8 @@ Guidelines:
 - Recipe names should be descriptive enough to recreate (e.g., "Garlic Herb Grilled Chicken with Roasted Vegetables" not just "Chicken")
 - Include key ingredients or cooking method in the name
 - Breakfast should be quick options
-- Vary meals throughout the week - no repeats
-- Consider ingredient reuse across days (e.g., if using chicken Monday, use it again Wednesday)
+- Vary meals throughout the week a little, but make sure it would be easy to go grocery shopping for everything without getting too many items.
+- Again, consider ingredient reuse across days (e.g., if using chicken Monday, use it again Wednesday)
 - Match the user's dietary requirements exactly"""
 
         prompt = f"""Create a weekly meal plan based on this request:
@@ -148,7 +148,7 @@ Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 day
             )
             
             if not response:
-                print("[MealPlan] ERROR: Empty response from Bedrock")
+                # print("[MealPlan] ERROR: Empty response from Bedrock")
                 return False
             
             print(f"[MealPlan] Got response: {response[:300]}...")
@@ -169,19 +169,19 @@ Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 day
                             recipe_name = day_meals[meal_type]
                             self.plan['days'][day_name]['meals'][meal_type] = {
                                 'name': recipe_name,
-                                'hydrated': False  # Flag: full recipe not yet generated
+                                'hydrated': False # Flag: full recipe not yet generated
                             }
             
             self._save()
-            print(f"[MealPlan] SUCCESS: Planned {self.get_meal_count()} meals")
+            # print(f"[MealPlan] SUCCESS: Planned {self.get_meal_count()} meals")
             return True
             
         except json.JSONDecodeError as e:
-            print(f"[MealPlan] ERROR: Failed to parse JSON: {e}")
-            print(f"[MealPlan] Response was: {response[:500] if response else 'None'}...")
+            # print(f"[MealPlan] ERROR: Failed to parse JSON: {e}")
+            # print(f"[MealPlan] Response was: {response[:500] if response else 'None'}...")
             return False
         except Exception as e:
-            print(f"[MealPlan] ERROR: {type(e).__name__}: {e}")
+            # print(f"[MealPlan] ERROR: {type(e).__name__}: {e}")
             return False
     
     def hydrate_recipe(self, day_name: str, meal_type: str) -> Optional[Dict]:
@@ -211,7 +211,7 @@ Generate descriptive recipe names for Breakfast, Lunch, and Dinner for all 7 day
         if not recipe_name:
             return None
         
-        print(f"[MealPlan] Hydrating recipe: {recipe_name}")
+        # print(f"[MealPlan] Hydrating recipe: {recipe_name}")
         
         system_prompt = """You are a professional chef. Create a complete recipe based on the given name.
 
@@ -262,11 +262,11 @@ Create a practical, delicious recipe with 4-8 ingredients and clear instructions
             }
             
             self._save()
-            print(f"[MealPlan] Hydrated: {recipe_name}")
+            # print(f"[MealPlan] Hydrated: {recipe_name}")
             return recipe_data
             
         except (json.JSONDecodeError, Exception) as e:
-            print(f"[MealPlan] ERROR hydrating recipe: {e}")
+            # print(f"[MealPlan] ERROR hydrating recipe: {e}")
             return None
     
     def get_week_start(self) -> str:

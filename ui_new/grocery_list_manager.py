@@ -20,7 +20,7 @@ WEB_API_URL = "https://web-production-baf4.up.railway.app"
 class GroceryListManager:
     """Manages grocery lists - generation, storage, and checking off items."""
     
-    # Common categories for organizing grocery items
+    # Categories for organizing grocery items
     CATEGORIES = [
         'Produce',
         'Meat & Seafood', 
@@ -29,14 +29,15 @@ class GroceryListManager:
         'Pantry',
         'Frozen',
         'Beverages',
-        'Other'
+        'Other',
+        'Optional'
     ]
     
     def __init__(self, bedrock_manager=None):
         self.data_dir = Path.home() / '.ai-sous-chef' / 'grocery_lists'
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.index_file = self.data_dir / 'index.json'
-        self.bedrock = bedrock_manager  # This is the BedrockManager from infra/managers
+        self.bedrock = bedrock_manager
         self.lists = self._load_index()
     
     def _load_index(self) -> List[Dict]:
@@ -130,19 +131,21 @@ class GroceryListManager:
         
         system_prompt = """You are a grocery list generator. Given recipe names, estimate ingredients needed.
 
-    Return ONLY valid JSON:
-    {
-        "Produce": [{"item": "onions", "quantity": "3 medium"}],
-        "Meat & Seafood": [{"item": "chicken breast", "quantity": "3 lbs"}],
-        "Dairy & Eggs": [{"item": "eggs", "quantity": "1 dozen"}],
-        "Bakery": [],
-        "Pantry": [{"item": "olive oil", "1 bottle"}],
-        "Frozen": [],
-        "Beverages": [],
-        "Other": []
-    }
+Return ONLY valid JSON:
+{
+    "Produce": [{"item": "onions", "quantity": "3 medium"}],
+    "Meat & Seafood": [{"item": "chicken breast", "quantity": "3 lbs"}],
+    "Dairy & Eggs": [{"item": "eggs", "quantity": "1 dozen"}],
+    "Bakery": [],
+    "Pantry": [{"item": "olive oil", "quantity": "1 bottle"}],
+    "Frozen": [],
+    "Beverages": [],
+    "Other": [],
+    "Optional": [{"item": "fresh parsley", "quantity": "1 bunch", "reason": "adds freshness"}]
+}
 
-    Combine similar ingredients across recipes. Be practical with quantities."""
+Combine similar ingredients across recipes. Be practical with quantities.
+Add 3-5 optional ingredients that could enhance the recipes, with a brief reason (2-4 words)."""
 
         prompt = "Generate a grocery list for:\n" + "\n".join(f"- {name}" for name in recipe_names)
         
@@ -181,8 +184,11 @@ class GroceryListManager:
     "Pantry": [{"item": "flour", "quantity": "3 cups"}],
     "Frozen": [],
     "Beverages": [],
-    "Other": []
+    "Other": [],
+    "Optional": [{"item": "parsley", "quantity": "1 bunch", "reason": "adds freshness"}]
 }
+4. ONLY include essential ingredients under their categories.
+5. Add ingredients that could enhance the recipes under "Optional" with a brief reason (2-4 words).
 Be smart about combining - "2 cloves garlic" + "3 cloves garlic" = "5 cloves garlic".
 Round up quantities when combining."""
 
