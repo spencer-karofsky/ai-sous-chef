@@ -8,3 +8,6 @@ pygame
 vosk
 sounddevice
 numpy
+requests
+qrcode
+pillow

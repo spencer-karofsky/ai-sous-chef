@@ -12,6 +12,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 import uuid
+import requests
+
+WEB_API_URL = "https://web-production-baf4.up.railway.app"
 
 
 class GroceryListManager:
@@ -288,3 +291,47 @@ Round up quantities when combining."""
         total = sum(len(items) for items in grocery_list.get('categories', {}).values())
         checked = len(grocery_list.get('checked_items', []))
         return checked, total
+    
+    def sync_to_web(self, list_id: str) -> Optional[str]:
+        """Sync grocery list to web app, returns web URL. Always creates fresh web list."""
+        grocery_list = self._load_list(list_id)
+        if not grocery_list:
+            return None
+        
+        # Always create a new web list (replaces any old one)
+        try:
+            res = requests.post(f"{WEB_API_URL}/lists", timeout=10)
+            web_list_id = res.json()["list_id"]
+        except Exception as e:
+            print(f"[GroceryList] Failed to create web list: {e}")
+            return None
+        
+        # Flatten items
+        items = []
+        for category, cat_items in grocery_list.get('categories', {}).items():
+            for item in cat_items:
+                name = item.get('item', '')
+                qty = item.get('quantity', '')
+                items.append(f"{qty} {name}".strip() if qty else name)
+        
+        # Bulk add
+        try:
+            requests.post(
+                f"{WEB_API_URL}/lists/{web_list_id}/bulk",
+                json={"items": items},
+                timeout=10
+            )
+        except Exception as e:
+            print(f"[GroceryList] Failed to sync items: {e}")
+            return None
+        
+        # Update stored web ID
+        grocery_list['web_id'] = web_list_id
+        grocery_list['web_url'] = f"{WEB_API_URL}/l/{web_list_id}"
+        self._save_list(list_id, grocery_list)
+        
+        return grocery_list['web_url']
+
+    def get_web_url(self, list_id: str) -> Optional[str]:
+        """Always return None to force fresh sync."""
+        return None

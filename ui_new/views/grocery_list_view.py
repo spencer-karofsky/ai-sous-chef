@@ -8,6 +8,9 @@ Authors:
     * Spencer Karofsky (https://github.com/spencer-karofsky)
 """
 import pygame
+import qrcode
+import io
+
 from ui_new.constants import *
 
 # Warm background gradient
@@ -37,6 +40,23 @@ class GroceryListView:
         
         self.generating = False
         self.gradient_surface = None
+        self.show_qr = False
+        self.qr_surface = None
+        self.web_url = None
+
+    def _generate_qr_surface(self, url):
+        """Generate QR code as pygame surface with brand colors."""
+        qr = qrcode.QRCode(box_size=6, border=2)
+        qr.add_data(url)
+        qr.make(fit=True)
+        
+        # Teal on sage light background
+        img = qr.make_image(fill_color=(26, 94, 120), back_color=(227, 231, 226))
+        
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        return pygame.image.load(img_bytes)
     
     def set_managers(self, grocery_manager, meal_plan_manager=None):
         """Set the data managers."""
@@ -281,6 +301,33 @@ class GroceryListView:
                 y = self._draw_category(content_surface, cat_name, items, y)
         
         screen.blit(content_surface, (0, y_start), (0, self.scroll_offset, WIDTH, visible_height))
+
+        # QR modal overlay
+        if self.show_qr and self.qr_surface:
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+            
+            # Modal card
+            modal_w, modal_h = 300, 340
+            modal_x = (WIDTH - modal_w) // 2
+            modal_y = (HEIGHT - modal_h) // 2
+            modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+            pygame.draw.rect(screen, WHITE, modal_rect, border_radius=16)
+            
+            # Title
+            title = self.fonts['header'].render("Scan to View", True, SOFT_BLACK)
+            screen.blit(title, (modal_x + (modal_w - title.get_width()) // 2, modal_y + 20))
+            
+            # QR code
+            qr_x = modal_x + (modal_w - self.qr_surface.get_width()) // 2
+            screen.blit(self.qr_surface, (qr_x, modal_y + 60))
+            
+            # Close button
+            close_rect = pygame.Rect(modal_x + 20, modal_y + modal_h - 55, modal_w - 40, 40)
+            pygame.draw.rect(screen, SAGE_LIGHT, close_rect, border_radius=10)
+            close_text = self.fonts['body'].render("Close", True, SOFT_BLACK)
+            screen.blit(close_text, (close_rect.x + (close_rect.width - close_text.get_width()) // 2, close_rect.y + 10))
     
     def _draw_header_detail(self, screen):
         # Back button - sage light with sage border
@@ -313,13 +360,20 @@ class GroceryListView:
         subtitle = self.fonts['small'].render(progress, True, SOFT_BLACK)
         screen.blit(subtitle, (158, 56))
         
-        # Delete button - subtle coral
-        delete_rect = pygame.Rect(WIDTH - 100, 25, 70, 35)
-        pygame.draw.rect(screen, (250, 230, 230), delete_rect, border_radius=10)
-        pygame.draw.rect(screen, (220, 180, 180), delete_rect, border_radius=10, width=1)
-        delete_text = self.fonts['small'].render("Delete", True, (180, 80, 80))
+        # Share button - larger, teal
+        share_rect = pygame.Rect(WIDTH - 220, 18, 90, 45)
+        pygame.draw.rect(screen, TEAL, share_rect, border_radius=12)
+        share_text = self.fonts['body'].render("Share", True, WHITE)
+        screen.blit(share_text, (share_rect.x + (share_rect.width - share_text.get_width()) // 2, 
+                                share_rect.y + 10))
+        
+        # Delete button - larger, subtle coral
+        delete_rect = pygame.Rect(WIDTH - 115, 18, 90, 45)
+        pygame.draw.rect(screen, (250, 230, 230), delete_rect, border_radius=12)
+        pygame.draw.rect(screen, (220, 180, 180), delete_rect, border_radius=12, width=1)
+        delete_text = self.fonts['body'].render("Delete", True, (180, 80, 80))
         screen.blit(delete_text, (delete_rect.x + (delete_rect.width - delete_text.get_width()) // 2, 
-                                  delete_rect.y + 8))
+                                delete_rect.y + 10))
     
     def _draw_category(self, surface, cat_name, items, y):
         """Draw a category section."""
@@ -427,6 +481,17 @@ class GroceryListView:
         return None
     
     def _handle_detail_touch(self, x, y):
+        # QR modal close
+        if self.show_qr:
+            modal_w, modal_h = 300, 380
+            modal_x = (WIDTH - modal_w) // 2
+            modal_y = (HEIGHT - modal_h) // 2
+            close_rect = pygame.Rect(modal_x + 20, modal_y + modal_h - 55, modal_w - 40, 40)
+            if close_rect.collidepoint(x, y) or not pygame.Rect(modal_x, modal_y, modal_w, modal_h).collidepoint(x, y):
+                self.show_qr = False
+                return 'close_qr'
+            return None
+        
         # Back button
         if 30 <= x <= 125 and 20 <= y <= 60:
             self.current_list_id = None
@@ -434,8 +499,21 @@ class GroceryListView:
             self.scroll_offset = 0
             return 'back_to_lists'
         
-        # Delete button
-        if WIDTH - 100 <= x <= WIDTH - 30 and 25 <= y <= 60:
+        # Share button (larger: x from WIDTH-220 to WIDTH-130, y from 18 to 63)
+        if WIDTH - 220 <= x <= WIDTH - 130 and 18 <= y <= 63:
+            if self.grocery_manager and self.current_list_id:
+                url = self.grocery_manager.get_web_url(self.current_list_id)
+                if not url:
+                    url = self.grocery_manager.sync_to_web(self.current_list_id)
+                if url:
+                    self.web_url = url
+                    self.qr_surface = self._generate_qr_surface(url)
+                    self.show_qr = True
+                    return 'show_qr'
+            return None
+        
+        # Delete button (larger: x from WIDTH-115 to WIDTH-25, y from 18 to 63)
+        if WIDTH - 115 <= x <= WIDTH - 25 and 18 <= y <= 63:
             if self.grocery_manager and self.current_list_id:
                 self.grocery_manager.delete_list(self.current_list_id)
                 self.current_list_id = None
@@ -443,7 +521,7 @@ class GroceryListView:
                 self.scroll_offset = 0
                 return 'deleted_list'
         
-        # Item checkboxes
+        # Item checkboxes (rest stays the same)
         y_start = 90
         content_y = y - y_start + self.scroll_offset
         
@@ -452,7 +530,7 @@ class GroceryListView:
         
         for cat_name, items in categories.items():
             if items:
-                item_y += 45  # Category header
+                item_y += 45
                 
                 for i, item in enumerate(items):
                     if item_y <= content_y <= item_y + 48:
