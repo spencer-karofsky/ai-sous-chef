@@ -149,7 +149,7 @@ class GroceryListManager:
     - Do NOT add random items like tea, snacks, or general groceries
     - Every ingredient must be directly used in one of the recipes
     - Use Title Case for item names (e.g. "Chicken Breast" not "chicken breast")
-    - Use Title Case for quantities (e.g. "1 Lb" not "1 lb", "2 Cups" not "2 cups")
+    - Use Title Case for quantities (e.g. "1 Pound" not "1 lb", "2 Cups" not "2 cups")
     - Format quantities with "of" where appropriate (e.g. "1 Head of Garlic", "1 Can of Tomatoes")
     - Combine similar ingredients across recipes
     - Be practical with quantities
