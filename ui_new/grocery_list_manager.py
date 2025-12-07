@@ -131,23 +131,33 @@ class GroceryListManager:
         
         system_prompt = """You are a grocery list generator. Given recipe names, estimate ingredients needed.
 
-Return ONLY valid JSON:
-{
-    "Produce": [{"item": "onions", "quantity": "3 medium"}],
-    "Meat & Seafood": [{"item": "chicken breast", "quantity": "3 lbs"}],
-    "Dairy & Eggs": [{"item": "eggs", "quantity": "1 dozen"}],
-    "Bakery": [],
-    "Pantry": [{"item": "olive oil", "quantity": "1 bottle"}],
-    "Frozen": [],
-    "Beverages": [],
-    "Other": [],
-    "Optional": [{"item": "fresh parsley", "quantity": "1 bunch", "reason": "adds freshness"}]
-}
+    Return ONLY valid JSON:
+    {
+        "Produce": [{"item": "Onions", "quantity": "3 Medium"}],
+        "Meat & Seafood": [{"item": "Chicken Breast", "quantity": "3 Lbs"}],
+        "Dairy & Eggs": [{"item": "Eggs", "quantity": "1 Dozen"}],
+        "Bakery": [],
+        "Pantry": [{"item": "Olive Oil", "quantity": "1 Bottle"}],
+        "Frozen": [],
+        "Beverages": [],
+        "Other": [],
+        "Optional": [{"item": "Fresh Parsley", "quantity": "1 Bunch", "reason": "garnish for pasta"}]
+    }
 
-Combine similar ingredients across recipes. Be practical with quantities.
-Add 3-5 optional ingredients that could enhance the recipes, with a brief reason (2-4 words)."""
+    STRICT RULES:
+    - ONLY generate ingredients that are actually needed for the listed recipes
+    - Do NOT add random items like tea, snacks, or general groceries
+    - Every ingredient must be directly used in one of the recipes
+    - Use Title Case for item names (e.g. "Chicken Breast" not "chicken breast")
+    - Use Title Case for quantities (e.g. "1 Lb" not "1 lb", "2 Cups" not "2 cups")
+    - Format quantities with "of" where appropriate (e.g. "1 Head of Garlic", "1 Can of Tomatoes")
+    - Combine similar ingredients across recipes
+    - Be practical with quantities
 
-        prompt = "Generate a grocery list for:\n" + "\n".join(f"- {name}" for name in recipe_names)
+    Optional items must also be relevant to the recipes - things that could genuinely enhance them.
+    The reason should say what it adds and for which recipe (e.g. "crunch for tacos", "richness for risotto")."""
+
+        prompt = "Generate a grocery list for ONLY these recipes:\n" + "\n".join(f"- {name}" for name in recipe_names)
         
         try:
             response = self.bedrock.invoke_model_with_system(
