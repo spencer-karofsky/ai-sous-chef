@@ -193,7 +193,7 @@ class GroceryListView:
                 plan_name = plan_name[:37] + '...'
             text = f"Generate List from {plan_name}"
         else:
-            text = "Add meals to generate a list"
+            text = "Create a Meal Plan to Generate a Grocery List"
         
         btn_text = self.fonts['body'].render(text, True, text_color)
         screen.blit(btn_text, (btn_rect.x + (50 if has_meals else 20), btn_rect.y + 16))
