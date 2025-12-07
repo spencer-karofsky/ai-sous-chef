@@ -746,21 +746,43 @@ class RecipeApp:
 
     def _draw_loading(self):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 220))
+        overlay.fill((255, 251, 245, 230)) # Warm white overlay
         self.screen.blit(overlay, (0, 0))
 
         ticks = pygame.time.get_ticks()
         cx, cy = WIDTH // 2, HEIGHT // 2
         
+        # Spinner using TEAL
         for i in range(8):
             angle = i * 45 + ticks / 5
             x = cx + int(30 * pygame.math.Vector2(1, 0).rotate(angle).x)
             y = cy + int(30 * pygame.math.Vector2(1, 0).rotate(angle).y)
-            color = (SOFT_BLACK[0], SOFT_BLACK[1], SOFT_BLACK[2])
-            pygame.draw.circle(self.screen, color, (x, y), 6 - i * 0.5)
+            alpha = 255 - i * 28
+            pygame.draw.circle(self.screen, TEAL, (x, y), int(6 - i * 0.5))
 
-        loading_text = self.fonts['body'].render("Loading...", True, CHARCOAL)
-        self.screen.blit(loading_text, (cx - loading_text.get_width() // 2, cy + 50))
+        # Custom message based on context
+        if self.current_view == 'GroceryList' and self.views['GroceryList'].generating:
+            base_text = "Creating Your Custom Grocery List"
+        else:
+            base_text = "Generating"
+        
+        # Calculate center position using full text width (with all 3 dots)
+        full_text = f"{base_text}..."
+        full_width = self.fonts['body'].size(full_text)[0]
+        text_x = cx - full_width // 2
+        
+        # Animated dots
+        dot_count = (ticks // 400) % 4
+        dots = "." * dot_count
+        
+        # Render base text
+        base_surface = self.fonts['body'].render(base_text, True, SOFT_BLACK)
+        self.screen.blit(base_surface, (text_x, cy + 50))
+        
+        # Render dots separately
+        if dot_count > 0:
+            dots_surface = self.fonts['body'].render(dots, True, SOFT_BLACK)
+            self.screen.blit(dots_surface, (text_x + base_surface.get_width(), cy + 50))
     
     def _view_saved_recipe(self, recipe_id):
         """Load and view a saved recipe."""
