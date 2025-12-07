@@ -117,9 +117,9 @@ class GroceryListView:
             cy = list_start_y + 80
             cx = WIDTH // 2
             pygame.draw.circle(screen, TEAL, (cx, cy), 45)
-            pygame.draw.circle(screen, WHITE, (cx - 10, cy + 12), 4)
-            pygame.draw.circle(screen, WHITE, (cx + 10, cy + 12), 4)
-            pygame.draw.lines(screen, WHITE, False, [
+            pygame.draw.circle(screen, SAGE_LIGHT, (cx - 10, cy + 12), 4)
+            pygame.draw.circle(screen, SAGE_LIGHT, (cx + 10, cy + 12), 4)
+            pygame.draw.lines(screen, SAGE_LIGHT, False, [
                 (cx - 18, cy - 15), (cx - 12, cy + 5), (cx + 15, cy + 5), (cx + 20, cy - 10)
             ], 3)
             msg = self.fonts['header'].render("No Grocery Lists", True, SOFT_BLACK)
@@ -177,14 +177,14 @@ class GroceryListView:
             pygame.draw.rect(shadow, (0, 0, 0, 20), (0, 0, btn_rect.width, btn_rect.height), border_radius=12)
             screen.blit(shadow, (btn_rect.x + 2, btn_rect.y + 3))
             pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
-            text_color = WHITE
+            text_color = SAGE_LIGHT
         else:
             pygame.draw.rect(screen, SAGE_LIGHT, btn_rect, border_radius=12)
             pygame.draw.rect(screen, SAGE, btn_rect, border_radius=12, width=1)
             text_color = DARK_GRAY
         
         if has_meals:
-            self._draw_sparkle(screen, btn_rect.x + 28, btn_rect.y + 28, 8, WHITE)
+            self._draw_sparkle(screen, btn_rect.x + 28, btn_rect.y + 28, 8, SAGE_LIGHT)
         
         if self.generating:
             text = "Creating a Custom Shopping List..."
@@ -215,19 +215,19 @@ class GroceryListView:
         shadow = pygame.Surface((width, height), pygame.SRCALPHA)
         pygame.draw.rect(shadow, (0, 0, 0, 12), (0, 0, width, height), border_radius=12)
         screen.blit(shadow, (x + 2, y + 2))
-        pygame.draw.rect(screen, WHITE, card_rect, border_radius=12)
+        pygame.draw.rect(screen, SAGE_LIGHT, card_rect, border_radius=12)
         pygame.draw.rect(screen, SAGE, card_rect, border_radius=12, width=1)
         
         # Store for touch handling
         list_id = grocery_list.get('id')
         
-        # Name at top
+        # Name at top - doubled character limit from 22 to 44
         name = grocery_list.get('name', 'Grocery List')
-        if len(name) > 22:
-            name = name[:19] + '...'
+        if len(name) > 44:
+            name = name[:41] + '...'
         screen.blit(self.fonts['body'].render(name, True, SOFT_BLACK), (x + 16, y + 12))
         
-        # Stats as pills
+        # Stats as pills - widened with more padding
         item_count = grocery_list.get('item_count', 0)
         recipe_count = grocery_list.get('recipe_count', 0)
         
@@ -235,15 +235,15 @@ class GroceryListView:
         pill_x = x + 16
         
         items_str = f"{item_count} items"
-        items_width = self.fonts['small'].size(items_str)[0] + 14
-        pygame.draw.rect(screen, SAGE_LIGHT, pygame.Rect(pill_x, pill_y, items_width, 20), border_radius=10)
-        screen.blit(self.fonts['small'].render(items_str, True, SOFT_BLACK), (pill_x + 7, pill_y + 2))
-        pill_x += items_width + 6
+        items_width = self.fonts['small'].size(items_str)[0] + 24
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, items_width, 24), border_radius=12)
+        screen.blit(self.fonts['small'].render(items_str, True, SOFT_BLACK), (pill_x + 12, pill_y + 4))
+        pill_x += items_width + 8
         
         recipes_str = f"{recipe_count} recipes"
-        recipes_width = self.fonts['small'].size(recipes_str)[0] + 14
-        pygame.draw.rect(screen, SAGE_LIGHT, pygame.Rect(pill_x, pill_y, recipes_width, 20), border_radius=10)
-        screen.blit(self.fonts['small'].render(recipes_str, True, SOFT_BLACK), (pill_x + 7, pill_y + 2))
+        recipes_width = self.fonts['small'].size(recipes_str)[0] + 24
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, recipes_width, 24), border_radius=12)
+        screen.blit(self.fonts['small'].render(recipes_str, True, SOFT_BLACK), (pill_x + 12, pill_y + 4))
         
         # Chevron at right
         chevron_x = x + width - 25
@@ -280,12 +280,12 @@ class GroceryListView:
             screen.blit(overlay, (0, 0))
             modal_w, modal_h = 300, 340
             modal_x, modal_y = (WIDTH - modal_w) // 2, (HEIGHT - modal_h) // 2
-            pygame.draw.rect(screen, WHITE, pygame.Rect(modal_x, modal_y, modal_w, modal_h), border_radius=16)
+            pygame.draw.rect(screen, SAGE_LIGHT, pygame.Rect(modal_x, modal_y, modal_w, modal_h), border_radius=16)
             title = self.fonts['header'].render("Scan to View", True, SOFT_BLACK)
             screen.blit(title, (modal_x + (modal_w - title.get_width()) // 2, modal_y + 20))
             screen.blit(self.qr_surface, (modal_x + (modal_w - self.qr_surface.get_width()) // 2, modal_y + 60))
             close_rect = pygame.Rect(modal_x + 20, modal_y + modal_h - 55, modal_w - 40, 40)
-            pygame.draw.rect(screen, SAGE_LIGHT, close_rect, border_radius=10)
+            pygame.draw.rect(screen, CARD_BG, close_rect, border_radius=10)
             screen.blit(self.fonts['body'].render("Close", True, SOFT_BLACK), 
                        (close_rect.x + (close_rect.width - self.fonts['body'].size("Close")[0]) // 2, close_rect.y + 10))
     
@@ -360,8 +360,8 @@ class GroceryListView:
         pygame.draw.rect(shadow, (0, 0, 0, 15), (0, 0, width, height), border_radius=14)
         surface.blit(shadow, (x + 2, y + 2))
         
-        # Card background
-        pygame.draw.rect(surface, WHITE, card_rect, border_radius=14)
+        # Card background - changed from WHITE to SAGE_LIGHT
+        pygame.draw.rect(surface, SAGE_LIGHT, card_rect, border_radius=14)
         pygame.draw.rect(surface, SAGE, card_rect, border_radius=14, width=1)
         
         # Header
@@ -388,13 +388,13 @@ class GroceryListView:
         cat_text = self.fonts['body'].render(cat_name, True, SOFT_BLACK)
         surface.blit(cat_text, (x + 28, y + 8))
         
-        # Item count pill
+        # Item count pill - widened with more padding
         count_str = str(len(items))
-        count_width = self.fonts['small'].size(count_str)[0] + 14
-        count_rect = pygame.Rect(x + width - count_width - 30, y + 10, count_width, 20)
-        pygame.draw.rect(surface, SAGE_LIGHT, count_rect, border_radius=10)
+        count_width = self.fonts['small'].size(count_str)[0] + 24
+        count_rect = pygame.Rect(x + width - count_width - 30, y + 8, count_width, 24)
+        pygame.draw.rect(surface, CARD_BG, count_rect, border_radius=12)
         surface.blit(self.fonts['small'].render(count_str, True, SOFT_BLACK), 
-                    (count_rect.x + 7, count_rect.y + 2))
+                    (count_rect.x + 12, count_rect.y + 4))
         
         # Expand/collapse chevron
         chev_x = x + width - 18
@@ -436,8 +436,8 @@ class GroceryListView:
         
         if is_checked:
             pygame.draw.rect(surface, CHECK_GREEN, check_rect, border_radius=5)
-            pygame.draw.line(surface, WHITE, (check_x + 4, check_y + 9), (check_x + 7, check_y + 13), 2)
-            pygame.draw.line(surface, WHITE, (check_x + 7, check_y + 13), (check_x + 14, check_y + 5), 2)
+            pygame.draw.line(surface, SAGE_LIGHT, (check_x + 4, check_y + 9), (check_x + 7, check_y + 13), 2)
+            pygame.draw.line(surface, SAGE_LIGHT, (check_x + 7, check_y + 13), (check_x + 14, check_y + 5), 2)
         else:
             pygame.draw.rect(surface, SAGE, check_rect, 2, border_radius=5)
         
@@ -471,20 +471,20 @@ class GroceryListView:
         screen.blit(self.fonts['small'].render("Back", True, SOFT_BLACK), (ax + 18, ay - 9))
         
         name = self.current_list.get('name', 'Grocery List')
-        if len(name) > 20:
-            name = name[:17] + '...'
+        if len(name) > 50:
+            name = name[:47] + '...'
         screen.blit(self.fonts['header'].render(name, True, SOFT_BLACK), (150, 20))
         
         checked, total = self.grocery_manager.get_checked_count(self.current_list)
         progress = f"{checked}/{total}"
-        prog_width = self.fonts['small'].size(progress)[0] + 16
-        pygame.draw.rect(screen, SAGE_LIGHT, pygame.Rect(150, 52, prog_width, 24), border_radius=12)
-        screen.blit(self.fonts['small'].render(progress, True, SOFT_BLACK), (158, 56))
+        prog_width = self.fonts['small'].size(progress)[0] + 24
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(150, 52, prog_width, 28), border_radius=14)
+        screen.blit(self.fonts['small'].render(progress, True, SOFT_BLACK), (162, 58))
         
         # Share button
         share_rect = pygame.Rect(WIDTH - 220, 18, 90, 45)
         pygame.draw.rect(screen, TEAL, share_rect, border_radius=12)
-        share_text = self.fonts['body'].render("Share", True, WHITE)
+        share_text = self.fonts['body'].render("Share", True, SAGE_LIGHT)
         screen.blit(share_text, (share_rect.x + (90 - share_text.get_width()) // 2, share_rect.y + 10))
         
         # Delete button
