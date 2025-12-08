@@ -11,7 +11,7 @@ Authors:
 from infra.managers.bedrock_manager import BedrockManager
 from infra.config import AWS_RESOURCES
 from botocore.client import BaseClient
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import json
 
 
@@ -61,20 +61,13 @@ If a quantity is truly unclear, use your best judgment to make it cookable.
 
 class RecipePrompter:
     def __init__(self, client: BaseClient) -> None:
-        """
-        Initialize the RecipePrompter with a Bedrock client.
-        
-        Args:
-            client: boto3 Bedrock Runtime client
-        """
         self.bedrock = BedrockManager(client)
         self.current_recipe: Optional[Dict] = None
         self.conversation_history: List[Dict] = []
+        self.modification_suggestions: List[str] = []
     
     def extract_search_params(self, user_query: str) -> Optional[Dict]:
-        """
-        Extract structured search parameters from natural language query.
-        """
+        """Extract structured search parameters from natural language query."""
         system_prompt = """You extract structured search parameters from food requests.
 Return ONLY valid JSON with these optional fields:
 - keywords: list of ingredient/dish/cuisine keywords (lowercase)
@@ -102,9 +95,7 @@ Example output: {"keywords": ["chicken"], "category": "Dinner", "max_calories": 
             return None
     
     def format_recipe(self, raw_recipe: Dict) -> Optional[Dict]:
-        """
-        Standardize a raw recipe into the canonical format.
-        """
+        """Standardize a raw recipe into the canonical format."""
         system_prompt = f"""You are a recipe formatter for a cooking app. Your job is to take raw recipe data and output a clean, standardized JSON recipe.
 
 CRITICAL: Output ONLY valid JSON. No markdown, no explanation, no extra text.
@@ -145,13 +136,58 @@ INGREDIENT VALIDATION (CRITICAL):
             recipe = json.loads(self._clean_json(response))
             self.current_recipe = recipe
             self.conversation_history = []
+            self.modification_suggestions = []
             return recipe
         except json.JSONDecodeError:
             return None
     
-    def generate_recipe(self, user_request: str) -> Optional[Dict]:
+    def _generate_modification_suggestions(self, recipe: Dict) -> List[str]:
+        """Generate 3 contextual modification suggestions for a recipe."""
+        system_prompt = """You suggest recipe modifications. Given a recipe, suggest exactly 3 short, actionable modifications.
+
+STRICT RULES:
+1. Each suggestion must be 2-5 words max
+2. Use imperative phrases like "Make it spicier" not "You could make it spicier"
+3. CRITICAL: The first suggestion MUST be about portion/serving size (e.g., "Double the servings", "Halve the recipe", "Make it for 6")
+4. The second suggestion should be about dietary modification (e.g., "Make it vegetarian", "Make it gluten-free", "Make it dairy-free", "Make it keto")
+5. The third suggestion should be about flavor/technique (e.g., "Make it spicier", "Add a crispy topping", "Make it creamy")
+6. NEVER suggest adding an ingredient that is already in the recipe - check the ingredients list carefully!
+7. NEVER suggest a dietary modification that already applies (don't suggest "Make it vegetarian" if it has no meat)
+
+Return ONLY valid JSON: {"suggestions": ["portion suggestion", "dietary suggestion", "flavor suggestion"]}
+"""
+        
+        # Include full ingredients list so the model can check what's already there
+        ingredients_list = [i.get('item', '') for i in recipe.get('ingredients', [])]
+        recipe_summary = f"Recipe: {recipe.get('name', 'Unknown')}\nServings: {recipe.get('servings', 'Unknown')}\nTags: {', '.join(recipe.get('tags', []))}\nFull ingredients list: {', '.join(ingredients_list)}"
+        
+        response = self.bedrock.invoke_model_with_system(
+            prompt=recipe_summary,
+            system_prompt=system_prompt,
+            model_id=AWS_RESOURCES['bedrock_model_id_extract_search_params'],
+            max_tokens=128,
+            temperature=0.7
+        )
+        
+        if not response:
+            return ["Double the servings", "Make it vegetarian", "Make it spicier"]
+        
+        try:
+            result = json.loads(self._clean_json(response))
+            suggestions = result.get('suggestions', [])[:3]
+            if len(suggestions) == 3:
+                return suggestions
+        except json.JSONDecodeError:
+            pass
+        
+        return ["Double the servings", "Make it vegetarian", "Make it spicier"]
+    
+    def generate_recipe(self, user_request: str) -> Tuple[Optional[Dict], List[str]]:
         """
         Generate a new recipe based on user request.
+        
+        Returns:
+            Tuple of (recipe dict or None, list of 3 modification suggestions)
         """
         system_prompt = f"""You are an expert chef creating recipes for a cooking app. Generate creative, delicious, and practical recipes.
 
@@ -179,20 +215,22 @@ Rules:
         )
         
         if not response:
-            return None
+            return None, []
             
         try:
             recipe = json.loads(self._clean_json(response))
             self.current_recipe = recipe
             self.conversation_history = []
-            return recipe
+            
+            # Generate modification suggestions for the new recipe
+            self.modification_suggestions = self._generate_modification_suggestions(recipe)
+            
+            return recipe, self.modification_suggestions
         except json.JSONDecodeError:
-            return None
+            return None, []
     
     def rank_recipes(self, user_query: str, recipes: List[Dict], top_n: int = 5) -> List[Dict]:
-        """
-        Rank recipes by relevance to user query.
-        """
+        """Rank recipes by relevance to user query."""
         if not recipes:
             return []
         
@@ -203,7 +241,6 @@ Rules:
 Given a user request and list of recipes, return the indices of the most relevant recipes in order of best match.
 Return ONLY valid JSON: {"ranked_indices": [0, 3, 1, ...]}"""
         
-        # Build condensed recipe list for ranking
         recipe_summaries = [
             f"{i}: {r.get('name', 'Unknown')} - {r.get('category', '')} - {r.get('calories', 'N/A')} cal"
             for i, r in enumerate(recipes[:50])
@@ -234,13 +271,11 @@ Return ONLY valid JSON: {"ranked_indices": [0, 3, 1, ...]}"""
         """
         Handle follow-up requests to modify the current recipe.
         
-        Only accepts modification requests. Rejects off-topic or question-only inputs.
-        
         Returns:
-            Tuple of (response_text, modified_recipe or None)
+            Tuple of (response_text, modified_recipe or None, new_suggestions or [])
         """
         if not self.current_recipe:
-            return "No recipe loaded. Search for a recipe first.", None
+            return "No recipe loaded. Search for a recipe first.", None, []
         
         system_prompt = f"""You are an AI sous chef that ONLY modifies recipes. You do not answer general questions.
 
@@ -287,29 +322,38 @@ Current recipe:
         )
         
         if not response:
-            return "Sorry, I couldn't process that request.", None
+            return "Sorry, I couldn't process that request.", None, []
         
         cleaned = self._clean_json(response)
         
-        # Check if off-topic
         if cleaned.strip().upper() == "OFF_TOPIC":
-            return "I can only modify recipes. Try something like 'make it vegetarian', 'double the servings', or 'make it spicier'. Type 'done' to search for a new recipe.", None
+            return "I can only modify recipes. Try something like 'make it vegetarian', 'double the servings', or 'make it spicier'. Type 'done' to search for a new recipe.", None, []
         
-        # Try to parse as modified recipe
         try:
             modified_recipe = json.loads(cleaned)
             if isinstance(modified_recipe, dict) and 'name' in modified_recipe:
                 self.current_recipe = modified_recipe
-                return "Here's the modified recipe:", modified_recipe
+                # Generate new suggestions for the modified recipe
+                self.modification_suggestions = self._generate_modification_suggestions(modified_recipe)
+                return "Here's the modified recipe:", modified_recipe, self.modification_suggestions
         except json.JSONDecodeError:
             pass
         
-        return "I couldn't understand that modification. Try something like 'make it for 6 servings' or 'substitute tofu for chicken'. Type 'done' to search for a new recipe.", None
+        return "I couldn't understand that modification. Try something like 'make it for 6 servings' or 'substitute tofu for chicken'. Type 'done' to search for a new recipe.", None, []
+    
+    def get_modification_suggestions(self) -> List[str]:
+        """Get current modification suggestions."""
+        return self.modification_suggestions
+    
+    def clear_suggestions(self):
+        """Clear modification suggestions."""
+        self.modification_suggestions = []
     
     def clear_conversation(self) -> None:
         """Reset conversation state for a new recipe search."""
         self.current_recipe = None
         self.conversation_history = []
+        self.modification_suggestions = []
     
     def _clean_json(self, text: str) -> str:
         """Remove markdown code fences and extra whitespace from JSON response."""

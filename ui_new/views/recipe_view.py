@@ -23,6 +23,7 @@ class RecipeView:
         self.current_s3_key = None
         self.current_source = 'search'
         self.gradient_surface = None
+        self.suggestion_rects = []  # Store suggestion button rects for touch handling
     
     def set_manager(self, manager):
         self.favorites_manager = manager
@@ -55,8 +56,24 @@ class RecipeView:
             content_bottom = HEIGHT - KEYBOARD_HEIGHT
         
         self._draw_header(screen, recipe)
-        max_scroll = self._draw_content(screen, recipe, state['scroll_offset'], content_bottom)
-        self._draw_assistant_bar(screen, state, content_bottom)
+        
+        # Check if we have suggestions to show
+        suggestions = state.get('modification_suggestions', [])
+        has_suggestions = len(suggestions) == 3
+        
+        # Adjust content area if suggestions are shown
+        if has_suggestions and not keyboard_visible:
+            assistant_area_height = 130  # Extra height for suggestions + assistant bar
+        else:
+            assistant_area_height = 75
+        
+        max_scroll = self._draw_content(screen, recipe, state['scroll_offset'], content_bottom - assistant_area_height + 75)
+        
+        # Draw suggestions above assistant bar if available
+        if has_suggestions and not keyboard_visible:
+            self._draw_suggestion_chips(screen, suggestions, content_bottom)
+        
+        self._draw_assistant_bar(screen, state, content_bottom, has_suggestions)
         
         return max_scroll
     
@@ -303,7 +320,47 @@ class RecipeView:
         
         return y
     
-    def _draw_assistant_bar(self, screen, state, content_bottom):
+    def _draw_suggestion_chips(self, screen, suggestions, content_bottom):
+        """Draw modification suggestion chips above the assistant bar."""
+        self.suggestion_rects = []
+        
+        chips_y = content_bottom - 115  # Position above assistant bar
+        
+        # Calculate chip widths for centering
+        chip_padding = 20
+        chip_spacing = 10
+        chip_height = 36
+        
+        chip_widths = []
+        for suggestion in suggestions:
+            w = self.fonts['small'].size(suggestion)[0] + chip_padding * 2
+            chip_widths.append(w)
+        
+        total_width = sum(chip_widths) + chip_spacing * (len(suggestions) - 1)
+        start_x = (WIDTH - total_width) // 2
+        
+        # Draw chips
+        chip_x = start_x
+        for i, suggestion in enumerate(suggestions):
+            chip_width = chip_widths[i]
+            chip_rect = pygame.Rect(chip_x, chips_y, chip_width, chip_height)
+            
+            # Store rect for touch handling
+            self.suggestion_rects.append((i, chip_rect))
+            
+            # Light sage background with sage border
+            pygame.draw.rect(screen, SAGE_LIGHT, chip_rect, border_radius=18)
+            pygame.draw.rect(screen, SAGE, chip_rect, border_radius=18, width=1)
+            
+            # Text
+            text = self.fonts['small'].render(suggestion, True, SOFT_BLACK)
+            text_x = chip_x + (chip_width - text.get_width()) // 2
+            text_y = chips_y + (chip_height - text.get_height()) // 2
+            screen.blit(text, (text_x, text_y))
+            
+            chip_x += chip_width + chip_spacing
+    
+    def _draw_assistant_bar(self, screen, state, content_bottom, has_suggestions):
         """Draw friendly assistant bubble for recipe modifications."""
         bar_height = 75
         bar_y = content_bottom - bar_height
@@ -436,7 +493,15 @@ class RecipeView:
         if WIDTH - 58 <= x <= WIDTH - 22 and 22 <= y <= 58:
             return 'toggle_favorite'
         
-        # Assistant bar
+        # Check suggestion chips FIRST (if visible) - must be before assistant bar check
+        suggestions = state.get('modification_suggestions', [])
+        if len(suggestions) == 3 and not keyboard_visible and self.suggestion_rects:
+            for idx, chip_rect in self.suggestion_rects:
+                if chip_rect.collidepoint(x, y):
+                    # Return the actual suggestion text for direct modification
+                    return f'suggestion_modify_{suggestions[idx]}'
+        
+        # Assistant bar - only check if we didn't hit a suggestion chip
         bar_y = content_bottom - 75
         bubble_margin = 30
         bubble_rect = pygame.Rect(bubble_margin, bar_y + 12, WIDTH - bubble_margin * 2, 52)

@@ -59,7 +59,7 @@ class CreateView:
     def _draw_prompt_area(self, screen, state):
         y = 110
         
-        # Prompt input area - white with sage border
+        # Prompt input area
         area_rect = pygame.Rect(40, y, WIDTH - 80, 120)
         pygame.draw.rect(screen, WHITE, area_rect, border_radius=16)
         pygame.draw.rect(screen, SAGE, area_rect, 1, border_radius=16)
@@ -100,7 +100,7 @@ class CreateView:
             hint = self.fonts['small'].render("e.g., 'healthy chicken dinner under 500 calories'", True, DARK_GRAY)
             screen.blit(hint, (text_x, text_y + 40))
         
-        # Generate button - teal when active
+        # Generate button
         btn_y = y + 140
         btn_rect = pygame.Rect(40, btn_y, WIDTH - 80, 56)
         

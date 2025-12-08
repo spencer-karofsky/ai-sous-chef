@@ -59,7 +59,7 @@ class RecipeApp:
             'caption': pygame.font.SysFont(font_name, FONT_CAPTION),
         }
 
-        # Config - initialize early since views depend on it
+        # Config
         self.config = Config()
 
         # AWS clients
@@ -142,6 +142,8 @@ class RecipeApp:
         self.current_recipe_source = 'search'
         self.current_recipe_s3_key = None
 
+        self.modification_suggestions = []
+
     def _get_state(self):
         return {
             'search_text': self.search_text,
@@ -154,6 +156,7 @@ class RecipeApp:
             'modify_status': self.modify_status,
             'scroll_offset': self.scroll_offset,
             'recipe': self.prompter.current_recipe,
+            'modification_suggestions': self.modification_suggestions,
         }
 
     def _build_filter(self, params: dict) -> tuple:
@@ -259,11 +262,11 @@ class RecipeApp:
                         self.status = ""
                         self.current_recipe_source = 'search'
                         self.current_recipe_s3_key = selected['s3_key']
+                        self.modification_suggestions = []
             except Exception:
                 self.status = "Error loading"
             finally:
                 self.loading = False
-
         threading.Thread(target=do_fetch, daemon=True).start()
 
     def generate_recipe(self):
@@ -276,7 +279,7 @@ class RecipeApp:
 
         def do_generate():
             try:
-                recipe = self.prompter.generate_recipe(self.create_text)
+                recipe, suggestions = self.prompter.generate_recipe(self.create_text)
                 if recipe:
                     # Auto-save the generated recipe
                     self.saved_recipes_manager.add(recipe)
@@ -288,6 +291,7 @@ class RecipeApp:
                     self.create_text = ""
                     self.current_recipe_source = 'generated'
                     self.current_recipe_s3_key = None
+                    self.modification_suggestions = suggestions
             except Exception:
                 self.create_status = "Error generating"
             finally:
@@ -305,10 +309,11 @@ class RecipeApp:
 
         def do_modify():
             try:
-                response_text, modified = self.prompter.chat(self.modify_text)
+                response_text, modified, suggestions = self.prompter.chat(self.modify_text)
                 if modified:
                     self.modify_status = "Recipe updated!"
                     self.scroll_offset = 0
+                    self.modification_suggestions = suggestions
                 else:
                     self.modify_status = response_text[:40]
                 self.modify_text = ""
@@ -435,6 +440,13 @@ class RecipeApp:
         # Create actions
         elif action == 'generate':
             self.generate_recipe()
+        
+        elif action.startswith('suggestion_modify_'):
+            suggestion_text = action.replace('suggestion_modify_', '')
+            if suggestion_text:
+                self.modify_text = suggestion_text
+                self.modify_recipe()
+        
         elif action.startswith('suggestion_'):
             self.create_text = action.replace('suggestion_', '')
             self.active_input = 'create'
@@ -451,6 +463,12 @@ class RecipeApp:
                     else:
                         self._hydrate_and_view_meal(day_name, meal_type)
         
+        elif action.startswith('suggestion_modify_'):
+            suggestion_text = action.replace('suggestion_modify_', '')
+            if suggestion_text:
+                self.modify_text = suggestion_text
+                self.modify_recipe()
+                
         # Recipe actions
         elif action == 'back':
             if self.current_view in ('Favorites', 'SavedRecipes', 'MealPrep', 'GroceryList'):
@@ -480,6 +498,7 @@ class RecipeApp:
                 self.modify_status = ""
                 self.keyboard.visible = False
                 self.prompter.clear_conversation()
+                self.modification_suggestions = []
 
         elif action == 'modify':
             self.modify_recipe()
@@ -488,7 +507,7 @@ class RecipeApp:
         elif action == 'toggle_favorite':
             self._toggle_favorite()
         
-        # Meal plan actions - MUST come before generic view_
+        # Meal plan actions
         elif action.startswith('view_meal_'):
             parts = action.replace('view_meal_', '').split('_')
             if len(parts) == 2:
@@ -501,12 +520,12 @@ class RecipeApp:
                 day_name, meal_type = parts
                 self._hydrate_and_view_meal(day_name, meal_type)
         
-        # Saved recipes - MUST come before generic view_
+        # Saved recipes
         elif action.startswith('view_saved_'):
             recipe_id = action.replace('view_saved_', '')
             self._view_saved_recipe(recipe_id)
         
-        # Generic view for favorites - MUST be LAST of all view_ checks
+        # Generic view for favorites
         elif action.startswith('view_'):
             fav_id = action.replace('view_', '')
             self._view_favorite(fav_id)
@@ -564,7 +583,7 @@ class RecipeApp:
         if not meal:
             return
         
-        # Get the recipe data - either from recipe_data or the meal itself
+        # Get the recipe data
         recipe_data = meal.get('recipe_data') or meal
         
         # Ensure we have the required fields
@@ -586,6 +605,7 @@ class RecipeApp:
         self.previous_view = 'MealPrep'
         self.current_view = 'Recipe'
         self.scroll_offset = 0
+        self.modification_suggestions = []
 
     def _view_saved_recipe(self, recipe_id):
         """Load and view a saved recipe."""
@@ -690,6 +710,7 @@ class RecipeApp:
                     self.prompter.current_recipe = favorite['recipe_data']
                     self.current_recipe_source = 'generated'
                     self.current_recipe_s3_key = None
+                    self.modification_suggestions = []
                 elif favorite.get('s3_key'):
                     raw = self.s3.get_object(AWS_RESOURCES['s3_clean_bucket_name'], favorite['s3_key'])
                     if raw:
@@ -796,6 +817,7 @@ class RecipeApp:
         self.previous_view = 'SavedRecipes'
         self.current_view = 'Recipe'
         self.scroll_offset = 0
+        self.modification_suggestions = []
 
     def run(self):
         running = True
