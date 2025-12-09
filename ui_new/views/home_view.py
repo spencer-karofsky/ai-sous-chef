@@ -319,10 +319,22 @@ class HomeView:
         msg = self.fonts['body'].render("No meals planned for today", True, DARK_GRAY)
         screen.blit(msg, (box_rect.x + 25, center_y - 25))
         
-        btn_rect = pygame.Rect(box_rect.x + 25, center_y + 10, 180, 40)
-        pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=10)
+        btn_text_width = self.fonts['small'].size("Plan Your Week")[0]
+        HORIZONTAL_PADDING = 40 # Total padding (20 left, 20 right)
+        
+        BUTTON_WIDTH = btn_text_width + HORIZONTAL_PADDING
+        BUTTON_HEIGHT = 45 
+        
+        btn_rect = pygame.Rect(box_rect.x + 25, center_y + 10, BUTTON_WIDTH, BUTTON_HEIGHT)
+        pygame.draw.rect(screen, SOFT_BLACK, btn_rect, border_radius=12) 
+        
         btn_text = self.fonts['small'].render("Plan Your Week", True, WHITE)
-        screen.blit(btn_text, (btn_rect.x + 20, btn_rect.y + 10))
+        
+        # Center the text horizontally and vertically
+        text_x = btn_rect.x + (BUTTON_WIDTH - btn_text.get_width()) // 2
+        text_y = btn_rect.y + (BUTTON_HEIGHT - btn_text.get_height()) // 2
+        
+        screen.blit(btn_text, (text_x, text_y))
     
     def _draw_timer_pill(self, screen):
         """Active timer display."""
