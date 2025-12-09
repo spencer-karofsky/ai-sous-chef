@@ -196,7 +196,12 @@ class GroceryListView:
             text = "Create a Meal Plan to Generate a Grocery List"
         
         btn_text = self.fonts['body'].render(text, True, text_color)
-        screen.blit(btn_text, (btn_rect.x + (50 if has_meals else 20), btn_rect.y + 16))
+        btn_text = self.fonts['body'].render(text, True, text_color)
+        
+        text_y = btn_rect.y + (btn_rect.height - btn_text.get_height()) // 2
+        text_x = btn_rect.x + (50 if has_meals else 20)
+        
+        screen.blit(btn_text, (text_x, text_y))
     
     def _draw_sparkle(self, screen, cx, cy, size, color):
         points = [(cx, cy - size), (cx + size * 0.2, cy - size * 0.2), (cx + size, cy),
@@ -221,29 +226,38 @@ class GroceryListView:
         # Store for touch handling
         list_id = grocery_list.get('id')
         
-        # Name at top - doubled character limit from 22 to 44
+        # Name at top
         name = grocery_list.get('name', 'Grocery List')
-        if len(name) > 44:
-            name = name[:41] + '...'
+        if len(name) > 36:
+            name = name[:33] + '...'
         screen.blit(self.fonts['body'].render(name, True, SOFT_BLACK), (x + 16, y + 12))
         
-        # Stats as pills - widened with more padding
         item_count = grocery_list.get('item_count', 0)
         recipe_count = grocery_list.get('recipe_count', 0)
+        
+        PILL_HEIGHT = 28 # Increased height (was 24)
         
         pill_y = y + 45
         pill_x = x + 16
         
         items_str = f"{item_count} items"
         items_width = self.fonts['small'].size(items_str)[0] + 24
-        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, items_width, 24), border_radius=12)
-        screen.blit(self.fonts['small'].render(items_str, True, SOFT_BLACK), (pill_x + 12, pill_y + 4))
+        
+        # Item count pill
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, items_width, PILL_HEIGHT), border_radius=14) # Increased border radius
+        # Center the text vertically
+        text_y = pill_y + (PILL_HEIGHT - self.fonts['small'].get_height()) // 2
+        screen.blit(self.fonts['small'].render(items_str, True, SOFT_BLACK), (pill_x + 12, text_y))
         pill_x += items_width + 8
         
         recipes_str = f"{recipe_count} recipes"
         recipes_width = self.fonts['small'].size(recipes_str)[0] + 24
-        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, recipes_width, 24), border_radius=12)
-        screen.blit(self.fonts['small'].render(recipes_str, True, SOFT_BLACK), (pill_x + 12, pill_y + 4))
+        
+        # Recipe count pill
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(pill_x, pill_y, recipes_width, PILL_HEIGHT), border_radius=14) # Increased border radius
+        # Center the text vertically
+        text_y = pill_y + (PILL_HEIGHT - self.fonts['small'].get_height()) // 2
+        screen.blit(self.fonts['small'].render(recipes_str, True, SOFT_BLACK), (pill_x + 12, text_y))
         
         # Chevron at right
         chevron_x = x + width - 25
@@ -478,21 +492,34 @@ class GroceryListView:
         checked, total = self.grocery_manager.get_checked_count(self.current_list)
         progress = f"{checked}/{total}"
         prog_width = self.fonts['small'].size(progress)[0] + 24
-        pygame.draw.rect(screen, CARD_BG, pygame.Rect(150, 52, prog_width, 28), border_radius=14)
-        screen.blit(self.fonts['small'].render(progress, True, SOFT_BLACK), (162, 58))
+        
+        # --- PROGRESS PILL ADJUSTMENT ---
+        # Increase Y position slightly and increase height (e.g., from 28 to 32)
+        PILL_HEIGHT = 32 # New Height
+        PILL_Y = 50 # Adjusted Y position (was 52)
+        
+        pygame.draw.rect(screen, CARD_BG, pygame.Rect(150, PILL_Y, prog_width, PILL_HEIGHT), border_radius=16) # Increased border radius
+        screen.blit(self.fonts['small'].render(progress, True, SOFT_BLACK), (162, PILL_Y + (PILL_HEIGHT - self.fonts['small'].get_height()) // 2)) 
+        
+        BUTTON_HEIGHT = 50
+        BUTTON_Y = 15
         
         # Share button
-        share_rect = pygame.Rect(WIDTH - 220, 18, 90, 45)
+        share_rect = pygame.Rect(WIDTH - 220, BUTTON_Y, 90, BUTTON_HEIGHT)
         pygame.draw.rect(screen, TEAL, share_rect, border_radius=12)
         share_text = self.fonts['body'].render("Share", True, SAGE_LIGHT)
-        screen.blit(share_text, (share_rect.x + (90 - share_text.get_width()) // 2, share_rect.y + 10))
+        # Center the text vertically
+        text_y = share_rect.y + (BUTTON_HEIGHT - share_text.get_height()) // 2
+        screen.blit(share_text, (share_rect.x + (90 - share_text.get_width()) // 2, text_y))
         
         # Delete button
-        delete_rect = pygame.Rect(WIDTH - 115, 18, 90, 45)
+        delete_rect = pygame.Rect(WIDTH - 115, BUTTON_Y, 90, BUTTON_HEIGHT)
         pygame.draw.rect(screen, (250, 230, 230), delete_rect, border_radius=12)
         pygame.draw.rect(screen, (220, 180, 180), delete_rect, border_radius=12, width=1)
         delete_text = self.fonts['body'].render("Delete", True, (180, 80, 80))
-        screen.blit(delete_text, (delete_rect.x + (90 - delete_text.get_width()) // 2, delete_rect.y + 10))
+        # Center the text vertically
+        text_y = delete_rect.y + (BUTTON_HEIGHT - delete_text.get_height()) // 2
+        screen.blit(delete_text, (delete_rect.x + (90 - delete_text.get_width()) // 2, text_y))
     
     def handle_touch(self, pos, state, keyboard_visible=False):
         x, y = pos

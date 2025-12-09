@@ -78,12 +78,12 @@ KEY_WIDTH = 100
 KEY_HEIGHT = 42
 KEY_MARGIN = 5
 
-# Typography sizes
-FONT_TITLE = 48
-FONT_HEADER = 32
-FONT_BODY = 26
-FONT_SMALL = 22
-FONT_CAPTION = 18
+# FOnt sizes
+FONT_TITLE = 56 # was 48
+FONT_HEADER = 38 # was 32
+FONT_BODY = 32 # was 26
+FONT_SMALL = 26 # was 22
+FONT_CAPTION = 22 # was 18
 
 # Font names
 FONT_SANS = [

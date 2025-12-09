@@ -321,19 +321,28 @@ Round up quantities when combining."""
             print(f"[GroceryList] Failed to create web list: {e}")
             return None
         
-        # Flatten items
-        items = []
+        # ⚠️ MODIFICATION 1: Flatten and prepare data as dictionaries with category
+        web_items = []
         for category, cat_items in grocery_list.get('categories', {}).items():
             for item in cat_items:
                 name = item.get('item', '')
                 qty = item.get('quantity', '')
-                items.append(f"{qty} {name}".strip() if qty else name)
+                
+                # Combine quantity and name for the item name, or just use the name
+                item_name_with_qty = f"{qty} {name}".strip() if qty else name
+                
+                if item_name_with_qty:
+                    web_items.append({
+                        "name": item_name_with_qty,
+                        "category": category  # Include the category
+                    })
         
         # Bulk add
         try:
             requests.post(
                 f"{WEB_API_URL}/lists/{web_list_id}/bulk",
-                json={"items": items},
+                # ⚠️ MODIFICATION 2: Send the list of dictionaries
+                json={"items": web_items}, 
                 timeout=10
             )
         except Exception as e:
