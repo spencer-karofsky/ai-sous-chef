@@ -57,8 +57,9 @@ class MyKitchenView:
         title = self.fonts['header'].render("My Kitchen", True, SOFT_BLACK)
         screen.blit(title, (40, y))
         
+        SUBTITLE_OFFSET = 45 
         subtitle = self.fonts['small'].render("Your recipes and meal planning", True, DARK_GRAY)
-        screen.blit(subtitle, (40, y + 35))
+        screen.blit(subtitle, (40, y + SUBTITLE_OFFSET))
     
     def _draw_sections(self, screen):
         sections = [
@@ -136,13 +137,14 @@ class MyKitchenView:
         # Draw icon
         self._draw_icon(screen, section['icon'], icon_x, icon_y)
         
-        # Title
+        # Title (currently drawn at y + 20)
         title = self.fonts['header'].render(section['title'], True, SOFT_BLACK)
         screen.blit(title, (card_rect.x + 95, card_rect.y + 20))
         
         # Subtitle
+        SUBTITLE_OFFSET = 58
         subtitle = self.fonts['small'].render(section['subtitle'], True, DARK_GRAY)
-        screen.blit(subtitle, (card_rect.x + 95, card_rect.y + 52))
+        screen.blit(subtitle, (card_rect.x + 95, card_rect.y + SUBTITLE_OFFSET))
         
         # Chevron - teal accent
         chevron_x = card_rect.x + card_rect.width - 40
