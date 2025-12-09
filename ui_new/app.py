@@ -42,23 +42,37 @@ class RecipeApp:
         self.bedrock = BedrockManager(boto3.client('bedrock-runtime', region_name='us-east-1'))
         self.prompter = RecipePrompter(boto3.client('bedrock-runtime', region_name='us-east-1'))
 
-        # Fonts - find a good sans-serif font
-        font_name = None
+        # 1. Find a good sans-serif font for standard UI text
+        sans_font_name = None
         for name in FONT_SANS:
             if name is None:
                 break
+            # Use lowercasing for robust font checking
             if name.lower() in [f.lower() for f in pygame.font.get_fonts()]:
-                font_name = name
+                sans_font_name = name
                 break
         
+        # 2. Find a good serif font for the logo/branding
+        serif_font_name = None
+        for name in FONT_SERIF: # FONT_SERIF is assumed to be defined in ui_new/constants.py
+            if name is None:
+                break
+            if name.lower() in [f.lower() for f in pygame.font.get_fonts()]:
+                serif_font_name = name
+                break
+        
+        # 3. Create the font dictionary, using the appropriate font name for the logo
         self.fonts = {
-            'title': pygame.font.SysFont(font_name, FONT_TITLE, bold=True),
-            'header': pygame.font.SysFont(font_name, FONT_HEADER, bold=True),
-            'body': pygame.font.SysFont(font_name, FONT_BODY),
-            'small': pygame.font.SysFont(font_name, FONT_SMALL),
-            'caption': pygame.font.SysFont(font_name, FONT_CAPTION),
+            # Standard UI fonts use the found sans-serif font
+            'title': pygame.font.SysFont(sans_font_name, FONT_TITLE, bold=True),
+            'header': pygame.font.SysFont(sans_font_name, FONT_HEADER, bold=True),
+            'body': pygame.font.SysFont(sans_font_name, FONT_BODY),
+            'small': pygame.font.SysFont(sans_font_name, FONT_SMALL),
+            'caption': pygame.font.SysFont(sans_font_name, FONT_CAPTION),
+            
+            # Dedicated logo font uses the found serif font
+            'logo': pygame.font.SysFont(serif_font_name or sans_font_name, FONT_TITLE, bold=True),
         }
-
         # Config
         self.config = Config()
 

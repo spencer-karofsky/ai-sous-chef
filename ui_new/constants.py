@@ -22,6 +22,7 @@ BLACK = (20, 20, 20)
 ACCENT = (45, 45, 45)
 ACCENT_LIGHT = (100, 100, 100)
 DIVIDER = (230, 230, 230)
+BRONZE_TAN = (110, 80, 50)
 
 # App color palette
 SAGE = (142, 157, 139)
@@ -93,5 +94,13 @@ FONT_SANS = [
     "DejaVu Sans",
     "FreeSans",
     "Arial",
+    None
+]
+
+FONT_SERIF = [
+    "Times New Roman",
+    "Georgia",
+    "Baskerville",
+    "Liberation Serif",
     None
 ]

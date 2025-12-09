@@ -152,33 +152,43 @@ class HomeView:
         self.saved_recipes_manager = saved_recipes_manager
     
     def _draw_header(self, screen):
-        """Header row - title left, clock right, vertically aligned."""
-        header_y = 25
+        """Header row - title center, clock right, vertically aligned."""
+        header_y = 35
+ 
+        title = self.fonts['logo'].render("AI Sous Chef", True, BRONZE_TAN)
         
-        # Title and subtitle on left
-        title = self.fonts['title'].render("AI Sous Chef", True, SOFT_BLACK)
-        screen.blit(title, (40, header_y))
-        
-        subtitle = self.fonts['small'].render("Find a recipe or create something new", True, DARK_GRAY)
-        screen.blit(subtitle, (40, header_y + 50))
-        
-        # Clock box on right - aligned with title
+        # Center the title horizontally
+        title_x = (WIDTH - title.get_width()) // 2
+        screen.blit(title, (title_x, header_y))
+
         now = datetime.now()
         time_str = now.strftime("%I:%M").lstrip("0")
         ampm = now.strftime("%p")
         
-        clock_rect = pygame.Rect(WIDTH - 180, header_y, 140, 65)
+        CLOCK_WIDTH = 180
+        CLOCK_PADDING = 30 # Right padding
+        
+        clock_rect = pygame.Rect(WIDTH - CLOCK_WIDTH - CLOCK_PADDING, header_y - 10, CLOCK_WIDTH, 70) # Adjusted Y and Height
         pygame.draw.rect(screen, LIGHT_GRAY, clock_rect, border_radius=12)
         
+        # Center time text within the new, larger box
         time_text = self.fonts['header'].render(time_str, True, SOFT_BLACK)
-        screen.blit(time_text, (clock_rect.x + 18, clock_rect.y + 10))
+        
+        # Calculate X position to center time/ampm block relative to clock_rect
+        time_block_width = time_text.get_width() + self.fonts['small'].size(ampm)[0] + 5 
+        time_x = clock_rect.x + (CLOCK_WIDTH - time_block_width) // 2
+        
+        screen.blit(time_text, (time_x, clock_rect.y + 10))
         
         ampm_text = self.fonts['small'].render(ampm, True, DARK_GRAY)
-        screen.blit(ampm_text, (clock_rect.x + 18 + time_text.get_width() + 5, clock_rect.y + 18))
+        screen.blit(ampm_text, (time_x + time_text.get_width() + 5, clock_rect.y + 18))
         
+        # Calculate X position for the date text
         date_str = now.strftime("%a, %b %d")
         date_text = self.fonts['small'].render(date_str, True, DARK_GRAY)
-        screen.blit(date_text, (clock_rect.x + 18, clock_rect.y + 40))
+        date_x = clock_rect.x + (CLOCK_WIDTH - date_text.get_width()) // 2
+        
+        screen.blit(date_text, (date_x, clock_rect.y + 45))
     
     def _draw_quick_actions(self, screen):
         """Search and Create cards."""
