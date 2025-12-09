@@ -145,14 +145,14 @@ class GroceryListView:
             y += card_height + GRID_GAP
     
     def _draw_header_overview(self, screen):
-        back_rect = pygame.Rect(30, 20, 95, 40)
+        back_rect = pygame.Rect(30, 20, 110, 40)
         pygame.draw.rect(screen, SAGE_LIGHT, back_rect, border_radius=20)
         pygame.draw.rect(screen, SAGE, back_rect, border_radius=20, width=1)
         ax, ay = back_rect.x + 22, back_rect.y + 20
         pygame.draw.line(screen, TEAL, (ax + 8, ay - 6), (ax, ay), 2)
         pygame.draw.line(screen, TEAL, (ax, ay), (ax + 8, ay + 6), 2)
         back_text = self.fonts['small'].render("Back", True, SOFT_BLACK)
-        screen.blit(back_text, (ax + 18, ay - 9))
+        screen.blit(back_text, (ax + 18, ay - 14))
         
         title = self.fonts['header'].render("Grocery Lists", True, SOFT_BLACK)
         screen.blit(title, (150, 28))
@@ -503,8 +503,7 @@ class GroceryListView:
             surface.blit(self.fonts['caption'].render(f"({reason_text})", True, DARK_GRAY), (check_x + 26, check_y + 22))
     
     def _draw_header_detail(self, screen):
-        # --- Back Button Fix (Final Size Adjustment) ---
-        BACK_BUTTON_WIDTH = 140  # FINAL INCREASED width
+        BACK_BUTTON_WIDTH = 110
         BACK_BUTTON_HEIGHT = 50  
         BACK_BUTTON_Y = 15       
         
@@ -619,7 +618,22 @@ class GroceryListView:
         return None
     
     def _handle_detail_touch(self, x, y):
-        # QR modal handling... (unchanged)
+        # QR modal handling
+        if self.show_qr:
+            # Re-calculate modal bounds (must match drawing logic)
+            modal_w, modal_h = 300, 340
+            modal_x, modal_y = (WIDTH - modal_w) // 2, (HEIGHT - modal_h) // 2
+            
+            # Close button rectangle used for touch detection
+            close_rect = pygame.Rect(modal_x + 20, modal_y + modal_h - 55, modal_w - 40, 40)
+            
+            # Touch Logic: Check if touch is on the Close button OR outside the entire modal area
+            modal_bounds = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+            
+            if close_rect.collidepoint(x, y) or not modal_bounds.collidepoint(x, y):
+                self.show_qr = False
+                return 'close_qr'
+            return None
         
         # Back button FIX: Update X range (30 <= x <= 170)
         BACK_BUTTON_Y_START = 15

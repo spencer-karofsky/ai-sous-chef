@@ -167,23 +167,33 @@ class MealPrepView:
         btn_width = 320
         btn_rect = pygame.Rect(cx - btn_width // 2, cy + 150, btn_width, 55)
         
-        # Shadow
-        shadow_surface = pygame.Surface((btn_width, 55), pygame.SRCALPHA)
-        pygame.draw.rect(shadow_surface, (0, 0, 0, 25), (0, 0, btn_width, 55), border_radius=12)
-        screen.blit(shadow_surface, (btn_rect.x + 3, btn_rect.y + 4))
+        # Shadow drawing...
         
         pygame.draw.rect(screen, TEAL, btn_rect, border_radius=12)
         
-        # Large sparkle (left side)
-        spark_x = btn_rect.x + 30
+        btn_text = self.fonts['body'].render("Generate Meal Plan", True, WHITE)
+        text_width = btn_text.get_width()
+        
+        # --- FIX 1: Adjust Sparkle and Text Position for Separation ---
+        
+        # Calculate the required space for the icon and the text
+        ICON_SPACE = 40 # Space needed for sparkle + margin
+        TOTAL_CONTENT_WIDTH = text_width + ICON_SPACE 
+        
+        # Calculate the center position for the entire content block (icon + text)
+        content_x_start = btn_rect.x + (btn_width - TOTAL_CONTENT_WIDTH) // 2
+        
+        # Large sparkle (position it 10px from the calculated content start)
+        spark_x = content_x_start + 10 
         spark_y = btn_rect.y + 28
         self._draw_sparkle(screen, spark_x, spark_y, 10, WHITE)
         
         # Small sparkle (top right of large one)
         self._draw_sparkle(screen, spark_x + 10, spark_y - 9, 5, WHITE)
         
-        btn_text = self.fonts['body'].render("Generate Meal Plan", True, WHITE)
-        text_x = btn_rect.x + (btn_width - btn_text.get_width()) // 2 + 10
+        # Text position (start the text immediately after the sparkle space)
+        text_x = content_x_start + ICON_SPACE 
+        
         screen.blit(btn_text, (text_x, btn_rect.y + 15))
     
     def _draw_sparkle(self, screen, cx, cy, size, color):
